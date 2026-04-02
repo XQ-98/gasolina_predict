@@ -9,6 +9,8 @@ Sistema de prediccion que utiliza Machine Learning y la formula oficial del gobi
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.18-orange?logo=tensorflow)
 ![XGBoost](https://img.shields.io/badge/XGBoost-2.1-blue)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql)
+![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker)
 
 ---
 
@@ -62,7 +64,10 @@ Este enfoque es mas preciso que predecir el precio del combustible directamente,
                          REST API
                               |
                     BACKEND (FastAPI + Python)
-                              |
+                         |         |
+                    PostgreSQL   Yahoo Finance
+                    (Docker)     (WTI en vivo)
+                         |
           +-------------------+-------------------+
           |                                       |
     CAPA 1: WTI                          CAPA 2: FORMULA
@@ -117,6 +122,14 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 - Grafico de barras con cambios mensuales
 - Filtro por tipo de combustible
 
+### Base de datos (PostgreSQL)
+- **Persistencia completa** de todos los datos en PostgreSQL 16 (Docker)
+- **5 tablas**: precios historicos, WTI diario, predicciones, noticias, predicciones WTI
+- **Seed automatico**: al iniciar, carga 69 meses de datos reales (276 registros)
+- **Cache inteligente**: noticias se cachean por 24h, WTI diario se acumula
+- **Historial de predicciones**: cada prediccion se guarda con su precision calculable
+- **Graceful fallback**: si PostgreSQL no esta disponible, el sistema funciona sin BD
+
 ---
 
 ## Tecnologias
@@ -125,6 +138,8 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 | Tecnologia | Uso |
 |-----------|-----|
 | **FastAPI** | Framework web (API REST) |
+| **PostgreSQL 16** | Base de datos relacional (Docker) |
+| **SQLAlchemy 2.0** | ORM para Python |
 | **SARIMA** (statsmodels) | Modelo de series temporales |
 | **XGBoost** | Gradient boosting con features tecnicas |
 | **TensorFlow/Keras** | LSTM para secuencias temporales |
@@ -142,6 +157,12 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 | **Lucide React** | Iconos |
 | **date-fns** | Manejo de fechas |
 
+### Infraestructura
+| Tecnologia | Uso |
+|-----------|-----|
+| **Docker Compose** | Orquestacion de contenedores |
+| **PostgreSQL 16** | Base de datos en contenedor (puerto 5436) |
+
 ---
 
 ## Estructura del proyecto
@@ -150,14 +171,20 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 Prediccion_Gas/
 ├── README.md
 ├── .gitignore
+├── docker-compose.yml                      # PostgreSQL 16 en Docker
 ├── backend/
 │   ├── requirements.txt
 │   └── app/
 │       ├── main.py                         # FastAPI entry point
-│       ├── config.py                       # Configuracion (tickers, bandas, formula)
+│       ├── config.py                       # Configuracion (tickers, bandas, formula, BD)
 │       ├── api/
-│       │   ├── routes.py                   # 8 endpoints REST
+│       │   ├── routes.py                   # 9 endpoints REST
 │       │   └── schemas.py                  # Modelos Pydantic
+│       ├── database/
+│       │   ├── connection.py               # Engine SQLAlchemy + SessionLocal
+│       │   ├── models.py                   # 5 tablas (SQLAlchemy ORM)
+│       │   ├── crud.py                     # Operaciones CRUD completas
+│       │   └── init_db.py                  # Inicializacion + seed de datos
 │       ├── models/
 │       │   ├── ensemble.py                 # Ensemble de 3 modelos (mensual)
 │       │   ├── sarima_model.py             # SARIMA mensual
@@ -171,7 +198,7 @@ Prediccion_Gas/
 │       │   ├── feature_engineering.py      # Features tecnicas
 │       │   ├── explainability.py           # Analisis de factores
 │       │   ├── news_service.py             # Noticias + sentimiento
-│       │   └── demo_data.py                # Datos de respaldo
+│       │   └── demo_data.py                # Datos de respaldo (fallback sin BD)
 │       └── data/
 └── frontend/
     ├── package.json
@@ -202,6 +229,59 @@ Prediccion_Gas/
 
 ---
 
+## Base de datos
+
+### Esquema (PostgreSQL 16)
+
+| Tabla | Descripcion | Registros iniciales |
+|-------|-------------|---------------------|
+| `fuel_prices` | Precios historicos mensuales (dia 11) por combustible | 276 (69 meses x 4 combustibles) |
+| `wti_daily` | Precios diarios del WTI (se acumula automaticamente) | Se llena al consultar /api/wti |
+| `predictions` | Historial de predicciones con precision calculable | Se llena al hacer predicciones |
+| `news_cache` | Cache de noticias con sentimiento (expira en 24h) | Se llena al consultar /api/news |
+| `wti_predictions` | Predicciones del WTI (Capa 1) | Se llena con predicciones two_layer |
+
+### Diagrama de relaciones
+
+```
+fuel_prices (276 registros seed)
+├── date + fuel_type (UNIQUE)
+├── price, previous_price, change_percent
+└── band_status (TECHO | PISO | DENTRO | LIBRE)
+
+wti_daily (se acumula)
+├── date (UNIQUE)
+└── close_price, open, high, low, volume
+
+predictions (historial)
+├── fuel_type, approach, target_date
+├── predicted_price, actual_price (se llena despues)
+├── wti_predicted, wti_actual
+├── accuracy_pct (calculable)
+└── model_weights (JSON), confidence bounds
+
+news_cache (cache 24h)
+├── url (UNIQUE)
+├── title, source, sentiment, score
+└── fetched_at (para control de expiracion)
+
+wti_predictions (Capa 1)
+├── target_month
+├── predicted_avg, actual_avg
+├── sarima/xgboost/lstm predictions
+└── weights (JSON), accuracy_pct
+```
+
+### Modo sin base de datos
+
+Si PostgreSQL no esta disponible (contenedor detenido, sin Docker), el sistema **sigue funcionando** automaticamente:
+- Los precios historicos se leen de `data_pipeline.py` (datos hardcodeados)
+- El WTI se descarga directo de Yahoo Finance
+- Las predicciones se calculan pero no se persisten
+- Las noticias se obtienen en cada request sin cache
+
+---
+
 ## API Endpoints
 
 | Metodo | Endpoint | Descripcion |
@@ -214,6 +294,7 @@ Prediccion_Gas/
 | GET | `/api/band/history` | Historial de cambios del dia 11 |
 | GET | `/api/analysis` | Analisis de factores que afectan el precio |
 | GET | `/api/news` | Noticias de combustibles + sentimiento |
+| GET | `/api/predictions/history` | Historial de predicciones pasadas y su precision |
 
 ### Ejemplo de prediccion
 
@@ -229,15 +310,50 @@ Respuesta incluye:
 - `predictions`: Precio final con banda aplicada por mes
 - `confidence_interval`: Limites inferior y superior
 
+### Ejemplo de historial de predicciones
+
+```bash
+curl http://localhost:8000/api/predictions/history?fuel_type=extra&limit=10
+```
+
+Retorna predicciones pasadas con `predicted_price`, `actual_price` (si ya paso el dia 11) y `accuracy_pct`.
+
 ---
 
 ## Instalacion y ejecucion
 
-### Requisitos
-- Python 3.10+
-- Node.js 18+
+### Requisitos previos
+- **Python** 3.10+
+- **Node.js** 18+
+- **Docker** y **Docker Compose** (para PostgreSQL)
 
-### Backend
+### Paso 1: Clonar el repositorio
+
+```bash
+git clone https://github.com/xavierquiroz1998/gasolina_predict.git
+cd gasolina_predict
+```
+
+### Paso 2: Levantar PostgreSQL con Docker
+
+```bash
+docker compose up -d
+```
+
+Esto crea un contenedor `gaspredict_db` con:
+- **Puerto**: 5436 (host) -> 5432 (contenedor)
+- **Base de datos**: gaspredict
+- **Usuario**: gaspredict
+- **Password**: gaspredict2026
+- **Volumen persistente**: los datos sobreviven reinicios del contenedor
+
+Verificar que esta listo:
+```bash
+docker exec gaspredict_db pg_isready -U gaspredict -d gaspredict
+# Debe mostrar: accepting connections
+```
+
+### Paso 3: Instalar y ejecutar el backend
 
 ```bash
 cd backend
@@ -245,9 +361,26 @@ pip install -r requirements.txt
 python -m uvicorn app.main:app --reload --port 8000
 ```
 
-La documentacion interactiva de la API esta disponible en http://localhost:8000/docs
+Al iniciar, el backend automaticamente:
+1. Crea las 5 tablas en PostgreSQL
+2. Carga los 276 registros de precios historicos (seed)
+3. Descarga recursos NLTK para analisis de sentimiento
 
-### Frontend
+Verificar:
+```bash
+# API funcionando
+curl http://localhost:8000/
+
+# Documentacion interactiva
+# Abrir http://localhost:8000/docs
+
+# Verificar datos en BD
+docker exec gaspredict_db psql -U gaspredict -d gaspredict \
+  -c "SELECT count(*) FROM fuel_prices;"
+# Debe mostrar: 276
+```
+
+### Paso 4: Instalar y ejecutar el frontend
 
 ```bash
 cd frontend
@@ -256,7 +389,49 @@ npm run build
 npm run start -- -p 3001
 ```
 
-Abrir http://localhost:3001
+Abrir **http://localhost:3001** en el navegador.
+
+### Resumen de servicios
+
+| Servicio | URL | Puerto |
+|----------|-----|--------|
+| Frontend (Next.js) | http://localhost:3001 | 3001 |
+| Backend (FastAPI) | http://localhost:8000 | 8000 |
+| API Docs (Swagger) | http://localhost:8000/docs | 8000 |
+| PostgreSQL | localhost:5436 | 5436 |
+
+### Detener servicios
+
+```bash
+# Detener frontend y backend: Ctrl+C en sus terminales
+
+# Detener PostgreSQL (datos se conservan)
+docker compose stop
+
+# Eliminar contenedor y volumen (BORRA datos)
+docker compose down -v
+```
+
+---
+
+## Ejecucion sin Docker (modo sin BD)
+
+Si no tienes Docker instalado, el sistema funciona igualmente:
+
+```bash
+# Backend (sin PostgreSQL, usa datos en memoria)
+cd backend
+pip install -r requirements.txt
+python -m uvicorn app.main:app --reload --port 8000
+
+# Frontend
+cd frontend
+npm install
+npm run build
+npm run start -- -p 3001
+```
+
+El backend detecta automaticamente que PostgreSQL no esta disponible y usa los datos historicos hardcodeados en `data_pipeline.py`. Las predicciones funcionan igual, pero no se persisten entre reinicios.
 
 ---
 
@@ -284,8 +459,26 @@ Este proyecto implementa la logica del **Decreto Ejecutivo No. 308** (junio 2024
 5. **Formula de precio**:
    ```
    Precio = Terminal(CIF + transporte + almacenamiento + margen EP
-            + costo capital) * (1 + IVA) + margen comercial * (1 + IVA)
+            + costo capital) * (1 + IVA 15%) + margen comercial * (1 + IVA 15%)
    ```
+
+---
+
+## Glosario de siglas
+
+| Sigla | Significado |
+|-------|------------|
+| **WTI** | West Texas Intermediate - precio de referencia del petroleo crudo en EE.UU. |
+| **CIF** | Cost, Insurance and Freight - costo de importacion puesto en puerto ecuatoriano |
+| **IC** | Intervalo de Confianza - rango donde se espera que caiga el precio real (95%) |
+| **SARIMA** | Seasonal ARIMA - modelo estadistico de series temporales con estacionalidad |
+| **LSTM** | Long Short-Term Memory - red neuronal para secuencias temporales |
+| **MAPE** | Mean Absolute Percentage Error - error porcentual promedio del modelo |
+| **RMSE** | Root Mean Square Error - raiz del error cuadratico medio |
+| **MAE** | Mean Absolute Error - error absoluto promedio |
+| **IVA** | Impuesto al Valor Agregado - 15% en Ecuador (desde abril 2024) |
+| **EP** | Empresa Publica (Petroecuador) |
+| **RON** | Research Octane Number - medida del octanaje de la gasolina |
 
 ---
 

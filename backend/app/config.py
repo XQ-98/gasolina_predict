@@ -86,5 +86,9 @@ class Settings(BaseModel):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://localhost:3001"]
 
+    # Base de datos PostgreSQL
+    DATABASE_URL: str = "postgresql://gaspredict:gaspredict2026@localhost:5436/gaspredict"
+    DB_ENABLED: bool = True  # Se pone False automaticamente si no hay conexion
+
 
 settings = Settings()

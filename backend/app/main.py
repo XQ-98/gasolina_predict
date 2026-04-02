@@ -33,13 +33,27 @@ app.include_router(router, prefix="/api")
 
 @app.on_event("startup")
 async def startup_event():
-    """Descarga recursos de NLTK necesarios para analisis de sentimiento."""
+    """Inicializa recursos al arrancar: NLTK y base de datos."""
+    import logging
+
+    logger = logging.getLogger(__name__)
+
+    # Descargar recursos NLTK para analisis de sentimiento
     try:
         import nltk
         nltk.download("vader_lexicon", quiet=True)
         nltk.download("punkt", quiet=True)
     except Exception:
         pass
+
+    # Inicializar base de datos PostgreSQL
+    try:
+        from app.database.init_db import init_database
+        init_database()
+        logger.info("Base de datos inicializada correctamente")
+    except Exception as e:
+        logger.warning(f"No se pudo conectar a la BD: {e}. Usando modo sin BD.")
+        settings.DB_ENABLED = False
 
 
 @app.get("/")

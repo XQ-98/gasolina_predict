@@ -1,0 +1,25 @@
+version: "3.9"
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: gaspredict_db
+    environment:
+      POSTGRES_DB: gaspredict
+      POSTGRES_USER: gaspredict
+      POSTGRES_PASSWORD: gaspredict2026
+    ports:
+      - "5436:5432"
+    volumes:
+      - gaspredict_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gaspredict -d gaspredict"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+
+volumes:
+  gaspredict_data:
+    driver: local
