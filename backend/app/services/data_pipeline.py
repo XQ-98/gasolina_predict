@@ -6,10 +6,13 @@ Si las APIs fallan, usa datos de demostracion como fallback.
 """
 
 import logging
+import ssl
 from datetime import datetime, timedelta
 
 import numpy as np
 import pandas as pd
+import requests
+from requests.adapters import HTTPAdapter
 
 from app.config import settings
 from app.services.demo_data import (
@@ -21,6 +24,72 @@ from app.services.demo_data import (
 logger = logging.getLogger(__name__)
 
 _using_demo_data = False
+
+
+class _WeakSSLAdapter(HTTPAdapter):
+    """Adaptador SSL relajado para entornos corporativos con MITM/proxies."""
+
+    def init_poolmanager(self, *args, **kwargs):
+        ctx = ssl.create_default_context()
+        ctx.set_ciphers("DEFAULT@SECLEVEL=0")
+        ctx.check_hostname = False
+        ctx.verify_mode = ssl.CERT_NONE
+        kwargs["ssl_context"] = ctx
+        return super().init_poolmanager(*args, **kwargs)
+
+
+def _get_session() -> requests.Session:
+    """Crea sesion HTTP con SSL relajado y user-agent realista."""
+    s = requests.Session()
+    s.mount("https://", _WeakSSLAdapter())
+    s.headers["User-Agent"] = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0 Safari/537.36"
+    )
+    return s
+
+
+def _fetch_yahoo_chart(symbol: str, years: int) -> pd.DataFrame:
+    """Descarga datos historicos diarios desde Yahoo Finance Query API.
+
+    Esta funcion usa la API publica directa en lugar de yfinance, lo que
+    permite funcionar en entornos corporativos con SSL/proxies restrictivos.
+
+    Args:
+        symbol: Ticker (ej: CL=F, BZ=F, DX-Y.NYB)
+        years: Anos de historia a descargar
+
+    Returns:
+        DataFrame con columnas: date, open, high, low, close, volume
+    """
+    range_param = f"{max(years, 1)}y" if years <= 10 else "10y"
+    url = (
+        f"https://query1.finance.yahoo.com/v8/finance/chart/{symbol}"
+        f"?interval=1d&range={range_param}"
+    )
+
+    s = _get_session()
+    r = s.get(url, verify=False, timeout=20)
+    r.raise_for_status()
+
+    data = r.json()
+    result = data["chart"]["result"][0]
+    timestamps = result.get("timestamp", [])
+    quote = result["indicators"]["quote"][0]
+
+    if not timestamps:
+        raise ValueError(f"Sin datos para {symbol}")
+
+    df = pd.DataFrame({
+        "date": pd.to_datetime([datetime.fromtimestamp(t).date() for t in timestamps]),
+        "open": quote.get("open", []),
+        "high": quote.get("high", []),
+        "low": quote.get("low", []),
+        "close": quote.get("close", []),
+        "volume": quote.get("volume", []),
+    })
+    df = df.dropna(subset=["close"]).sort_values("date").reset_index(drop=True)
+    return df
 
 # -- Datos historicos reales de precios de combustibles en Ecuador --
 # Fuente: EP Petroecuador / Regulacion de precios del gobierno
@@ -201,26 +270,18 @@ def fetch_wti_data(years: int = None) -> pd.DataFrame:
     start = end - timedelta(days=years * 365)
 
     try:
-        import yfinance as yf
-        ticker = yf.Ticker(settings.WTI_TICKER)
-        df = ticker.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
-
-        if df.empty:
-            raise ValueError("DataFrame WTI vacio")
-
-        df = df.reset_index()
-        df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
+        df = _fetch_yahoo_chart(settings.WTI_TICKER, years)
         df = df.rename(columns={
-            "Date": "date",
-            "Close": "wti_close",
-            "Open": "wti_open",
-            "High": "wti_high",
-            "Low": "wti_low",
-            "Volume": "wti_volume",
+            "open": "wti_open",
+            "high": "wti_high",
+            "low": "wti_low",
+            "close": "wti_close",
+            "volume": "wti_volume",
         })
         df = df[["date", "wti_close", "wti_open", "wti_high", "wti_low", "wti_volume"]].copy()
-        df = df.sort_values("date").reset_index(drop=True)
         _using_demo_data = False
+        logger.info("WTI descargado de Yahoo Finance: %d dias, ultimo $%.2f",
+                    len(df), df["wti_close"].iloc[-1])
         return df
     except Exception as e:
         logger.warning("No se pudo obtener datos WTI: %s. Usando datos demo.", e)
@@ -241,18 +302,10 @@ def fetch_brent_data(years: int = None) -> pd.DataFrame:
     start = end - timedelta(days=years * 365)
 
     try:
-        import yfinance as yf
-        ticker = yf.Ticker(settings.BRENT_TICKER)
-        df = ticker.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
-
-        if df.empty:
-            raise ValueError("DataFrame Brent vacio")
-
-        df = df.reset_index()
-        df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
-        df = df.rename(columns={"Date": "date", "Close": "brent_close"})
+        df = _fetch_yahoo_chart(settings.BRENT_TICKER, years)
+        df = df.rename(columns={"close": "brent_close"})
         df = df[["date", "brent_close"]].copy()
-        return df.sort_values("date").reset_index(drop=True)
+        return df
     except Exception as e:
         logger.warning("No se pudo obtener datos Brent: %s. Usando datos demo.", e)
         return generate_brent_prices(years)
@@ -271,18 +324,10 @@ def fetch_dollar_index(years: int = None) -> pd.DataFrame:
     start = end - timedelta(days=years * 365)
 
     try:
-        import yfinance as yf
-        ticker = yf.Ticker(settings.DOLLAR_INDEX_TICKER)
-        df = ticker.history(start=start.strftime("%Y-%m-%d"), end=end.strftime("%Y-%m-%d"))
-
-        if df.empty:
-            raise ValueError("DataFrame Dollar Index vacio")
-
-        df = df.reset_index()
-        df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
-        df = df.rename(columns={"Date": "date", "Close": "dollar_index"})
+        df = _fetch_yahoo_chart(settings.DOLLAR_INDEX_TICKER, years)
+        df = df.rename(columns={"close": "dollar_index"})
         df = df[["date", "dollar_index"]].copy()
-        return df.sort_values("date").reset_index(drop=True)
+        return df
     except Exception as e:
         logger.warning("No se pudo obtener Dollar Index: %s. Usando datos demo.", e)
         return generate_dollar_index(years)

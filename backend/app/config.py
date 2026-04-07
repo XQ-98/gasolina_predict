@@ -45,24 +45,26 @@ class Settings(BaseModel):
 
     # Factores de la formula de precio del gobierno
     # Precio final = Precio en Terminal (con IVA) + Margen de Comercializacion (con IVA)
-    IMPORT_COST_WEIGHT: float = 0.45       # Peso del costo de importacion sobre WTI
+    # Calibrado con datos reales: Marzo 2026 WTI~$70 -> Extra=$2.89, Super=$3.41, Diesel=$2.828
+    IMPORT_COST_WEIGHT: float = 1.00       # Peso del costo de importacion (incluido en WTI_TO_GALLON_FACTOR)
     TRANSPORT_COST: float = 0.12           # $/galon transporte
     STORAGE_COST: float = 0.05             # $/galon almacenamiento
     PETROECUADOR_MARGIN: float = 0.08      # $/galon margen EP Petroecuador
     COMMERCIAL_MARGIN: float = 0.128       # $/galon margen comercializacion
-    CAPITAL_COST_RATE: float = 0.1078      # Tasa costo de capital
-    IVA_RATE: float = 0.15                 # 15% IVA Ecuador
+    CAPITAL_COST_RATE: float = 0.1078      # Tasa costo de capital (10.78% - D.E. 83)
+    IVA_RATE: float = 0.15                 # 15% IVA Ecuador (desde abril 2024)
 
-    # Factor de conversion WTI ($/barril) a $/galon base
-    # 1 barril = 42 galones, pero el rendimiento en gasolina es ~45-50%
-    WTI_TO_GALLON_FACTOR: float = 0.022    # Factor empirico para estimar costo/galon
+    # Factor de conversion WTI ($/barril) a $/galon base (CALIBRADO)
+    # Calibrado inversamente: WTI=$70 -> import cost ~$1.90/galon -> Extra teorico $2.89
+    # Anteriormente era 0.022*0.45=0.0099 (incorrecto, daba precios irreales)
+    WTI_TO_GALLON_FACTOR: float = 0.0272   # Factor calibrado con datos reales 2024-2026
 
-    # Factores de ajuste por tipo de combustible (refinacion, octanaje, etc.)
+    # Factores de ajuste por tipo de combustible (CALIBRADOS con precios reales)
     FUEL_REFINING_FACTOR: dict = {
-        "extra": 1.00,       # Base
-        "ecopais": 1.00,     # Similar a Extra (mezcla con etanol)
-        "super_95": 1.25,    # Mayor octanaje, mas caro de refinar
-        "diesel": 0.90,      # Menor costo de refinacion que gasolina
+        "extra": 1.000,      # Base (RON 87) - calibrado a $2.89 con WTI=$70
+        "ecopais": 1.000,    # Mismo precio que Extra (mezcla con etanol)
+        "super_95": 1.214,   # Mayor octanaje (RON 95) - calibrado a $3.41 con WTI=$70
+        "diesel": 0.974,     # Calibrado a $2.828 con WTI=$70 (post-eliminacion subsidio)
     }
 
     # Correlacion empirica WTI -> precio local
