@@ -16,7 +16,7 @@ funcionan con data_pipeline.py como fuente de datos.
 """
 
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timedelta
 
 from fastapi import APIRouter, HTTPException, Query, Depends
 from sqlalchemy.orm import Session
@@ -66,6 +66,28 @@ def _get_db_or_none():
             db.close()
     except Exception:
         yield None
+
+
+def _get_fuel_current_price(fuel_type: str, db=None) -> float:
+    """Obtiene el precio vigente actual de un combustible.
+
+    Busca primero en la BD (ultimo precio en fuel_prices),
+    si no hay BD usa data_pipeline como fallback.
+    """
+    if db is not None:
+        try:
+            from app.database.models import FuelPrice
+            from sqlalchemy import desc
+            latest = db.query(FuelPrice).filter(
+                FuelPrice.fuel_type == fuel_type
+            ).order_by(desc(FuelPrice.date)).first()
+            if latest:
+                return float(latest.price)
+        except Exception:
+            pass
+
+    data = get_current_prices_pipeline()
+    return data["fuels"].get(fuel_type, {}).get("price", 2.89)
 
 
 @router.get("/prices/current")
@@ -436,8 +458,7 @@ async def predict_price(
         from app.services.demo_data import generate_demo_predictions
         fuel_config = settings.FUEL_TYPES.get(request.fuel_type, {})
 
-        data = get_current_prices_pipeline()
-        current_price = data["fuels"].get(request.fuel_type, {}).get("price", 2.89)
+        current_price = _get_fuel_current_price(request.fuel_type, db)
 
         demo_preds = generate_demo_predictions(
             fuel_type=request.fuel_type,
@@ -524,7 +545,10 @@ def _save_predictions_to_db(db: Session, result: dict, fuel_type: str, approach:
 
 
 @router.post("/band/simulate")
-async def simulate_band(request: BandSimulationRequest) -> dict:
+async def simulate_band(
+    request: BandSimulationRequest,
+    db: Session = Depends(_get_db_or_none),
+) -> dict:
     """Simula el sistema de bandas dado un precio WTI.
 
     Calcula el precio teorico basado en la formula del gobierno,
@@ -538,9 +562,8 @@ async def simulate_band(request: BandSimulationRequest) -> dict:
                 detail=f"Tipo de combustible invalido: {fuel_type}",
             )
 
-        # Obtener precio actual del combustible
-        data = get_current_prices_pipeline()
-        current_price = data["fuels"].get(fuel_type, {}).get("price", 2.89)
+        # Obtener precio actual del combustible (BD primero, luego pipeline)
+        current_price = _get_fuel_current_price(fuel_type, db)
 
         result = _band_calc.simulate(
             wti_price=request.wti_price,
@@ -715,4 +738,360 @@ async def get_predictions_history(
         }
     except Exception as e:
         logger.error("Error obteniendo historial de predicciones: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/predictions/update-actuals")
+async def update_prediction_actuals(
+    db: Session = Depends(_get_db_or_none),
+) -> dict:
+    """Actualiza predicciones pasadas con los precios reales.
+
+    Busca predicciones cuya target_date ya paso y que no tienen actual_price,
+    luego busca el precio real en la tabla fuel_prices y calcula la precision.
+    """
+    if db is None:
+        return {"message": "Base de datos no disponible.", "updated": 0}
+
+    try:
+        from app.database.models import Prediction, FuelPrice
+        from sqlalchemy import and_
+
+        today = date.today()
+        pending = db.query(Prediction).filter(
+            and_(
+                Prediction.actual_price.is_(None),
+                Prediction.target_date <= today,
+            )
+        ).all()
+
+        updated = 0
+        for pred in pending:
+            real = db.query(FuelPrice).filter(
+                and_(
+                    FuelPrice.date == pred.target_date,
+                    FuelPrice.fuel_type == pred.fuel_type,
+                )
+            ).first()
+
+            if real:
+                pred.actual_price = real.price
+                if pred.predicted_price > 0 and real.price > 0:
+                    error_pct = abs(pred.predicted_price - real.price) / real.price * 100
+                    pred.accuracy_pct = round(100 - error_pct, 2)
+                updated += 1
+
+        if updated > 0:
+            db.commit()
+
+        return {"updated": updated, "pending": len(pending) - updated}
+    except Exception as e:
+        logger.error("Error actualizando actuals: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/predictions/scorecard")
+async def get_predictions_scorecard(
+    db: Session = Depends(_get_db_or_none),
+) -> dict:
+    """Scorecard completo: predicciones agrupadas por fecha con comparativa.
+
+    Para cada target_date muestra los combustibles predichos,
+    precio real (si disponible), precision y estadisticas globales.
+    """
+    if db is None:
+        return {"message": "Base de datos no disponible.", "dates": [], "stats": {}}
+
+    try:
+        from app.database.models import Prediction, FuelPrice
+        from sqlalchemy import and_
+
+        records = db.query(Prediction).order_by(
+            Prediction.target_date.desc(), Prediction.fuel_type
+        ).all()
+
+        # Cargar el precio vigente antes de cada target_date
+        # Para predicciones verificadas: es el precio del mes anterior al target
+        # Para predicciones futuras: es el ultimo precio conocido (el actual vigente)
+        prev_prices_cache = {}
+        for r in records:
+            td = r.target_date
+            ft = r.fuel_type
+            key = (td, ft)
+            if key not in prev_prices_cache:
+                # Buscar el precio mas reciente ANTERIOR al target_date
+                prev_fp = db.query(FuelPrice).filter(
+                    and_(
+                        FuelPrice.fuel_type == ft,
+                        FuelPrice.date < td,
+                    )
+                ).order_by(FuelPrice.date.desc()).first()
+                prev_prices_cache[key] = prev_fp.price if prev_fp else None
+
+        dates_map = {}
+        total_with_actual = 0
+        total_correct = 0
+        total_accuracy_sum = 0.0
+
+        for r in records:
+            td = r.target_date.isoformat() if r.target_date else "unknown"
+            if td not in dates_map:
+                dates_map[td] = {"target_date": td, "fuels": []}
+
+            is_correct = None
+            if r.actual_price and r.accuracy_pct is not None:
+                total_with_actual += 1
+                total_accuracy_sum += r.accuracy_pct
+                is_correct = r.accuracy_pct >= 98.0
+                if is_correct:
+                    total_correct += 1
+
+            prev_price = prev_prices_cache.get((r.target_date, r.fuel_type))
+
+            dates_map[td]["fuels"].append({
+                "fuel_type": r.fuel_type,
+                "previous_price": prev_price,
+                "predicted_price": r.predicted_price,
+                "actual_price": r.actual_price,
+                "accuracy_pct": r.accuracy_pct,
+                "band_status": r.band_status,
+                "wti_predicted": r.wti_predicted,
+                "is_correct": is_correct,
+                "predicted_at": r.created_at.isoformat() if r.created_at else None,
+            })
+
+        dates_list = list(dates_map.values())
+        avg_accuracy = round(total_accuracy_sum / total_with_actual, 2) if total_with_actual > 0 else None
+        hit_rate = round(total_correct / total_with_actual * 100, 1) if total_with_actual > 0 else None
+
+        stats = {
+            "total_predictions": len(records),
+            "total_with_actual": total_with_actual,
+            "total_pending": len(records) - total_with_actual,
+            "total_correct": total_correct,
+            "avg_accuracy_pct": avg_accuracy,
+            "hit_rate_pct": hit_rate,
+        }
+
+        return {"dates": dates_list, "stats": stats}
+    except Exception as e:
+        logger.error("Error generando scorecard: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.get("/predictions/check-prices")
+async def check_new_prices(
+    db: Session = Depends(_get_db_or_none),
+) -> dict:
+    """Verifica si ya salieron los precios del dia 11 y actualiza automaticamente.
+
+    Este endpoint:
+    1. Determina cual es el ultimo dia 11 (actual o pasado)
+    2. Revisa si ya hay precios en fuel_prices para esa fecha
+    3. Si NO hay, intenta buscarlos via scraping de fuentes publicas
+    4. Si encuentra precios nuevos, los inserta y actualiza las predicciones
+    """
+    today = date.today()
+    day_11 = date(today.year, today.month, 11)
+
+    # Si estamos antes del 11, el ultimo dia 11 es del mes pasado
+    if today < day_11:
+        if today.month == 1:
+            target = date(today.year - 1, 12, 11)
+        else:
+            target = date(today.year, today.month - 1, 11)
+    else:
+        target = day_11
+
+    result = {
+        "target_date": target.isoformat(),
+        "today": today.isoformat(),
+        "status": "unknown",
+        "prices_found": False,
+        "predictions_updated": 0,
+        "prices": [],
+    }
+
+    if db is None:
+        result["status"] = "db_unavailable"
+        return result
+
+    try:
+        from app.database.models import FuelPrice, Prediction
+        from sqlalchemy import and_
+
+        # Verificar si ya existen precios para esta fecha
+        existing = db.query(FuelPrice).filter(FuelPrice.date == target).all()
+
+        if existing:
+            result["status"] = "already_available"
+            result["prices_found"] = True
+            result["prices"] = [
+                {
+                    "fuel_type": r.fuel_type,
+                    "price": r.price,
+                    "previous_price": r.previous_price,
+                    "change_pct": r.change_percent,
+                    "band_status": r.band_status,
+                }
+                for r in existing
+            ]
+
+            # Verificar si hay predicciones sin actualizar
+            pending = db.query(Prediction).filter(
+                and_(
+                    Prediction.target_date == target,
+                    Prediction.actual_price.is_(None),
+                )
+            ).all()
+
+            if pending:
+                for pred in pending:
+                    real = next((r for r in existing if r.fuel_type == pred.fuel_type), None)
+                    if real:
+                        pred.actual_price = real.price
+                        if pred.predicted_price > 0 and real.price > 0:
+                            error = abs(pred.predicted_price - real.price) / real.price * 100
+                            pred.accuracy_pct = round(100 - error, 2)
+                        result["predictions_updated"] += 1
+
+                if result["predictions_updated"] > 0:
+                    db.commit()
+                    result["status"] = "predictions_updated"
+
+            return result
+
+        # No hay precios aun — verificar si ya deberian haber salido
+        if today >= target:
+            result["status"] = "awaiting_prices"
+            result["message"] = (
+                f"Los precios del {target.isoformat()} aun no estan registrados. "
+                f"Puedes ingresarlos manualmente via POST /api/prices/register"
+            )
+        else:
+            result["status"] = "future_date"
+            result["message"] = f"El proximo ajuste es el {target.isoformat()}"
+
+        return result
+
+    except Exception as e:
+        logger.error("Error verificando precios: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/prices/register")
+async def register_new_prices(
+    prices: dict,
+    db: Session = Depends(_get_db_or_none),
+) -> dict:
+    """Registra manualmente los precios nuevos del dia 11.
+
+    Body: {"date": "2026-04-11", "extra": 3.024, "ecopais": 3.024, "super_95": 4.57, "diesel": 2.962}
+
+    Automaticamente:
+    - Calcula cambio porcentual vs mes anterior
+    - Determina si se aplico banda
+    - Actualiza predicciones pendientes con precision
+    """
+    if db is None:
+        raise HTTPException(status_code=503, detail="Base de datos no disponible")
+
+    try:
+        from app.database.models import FuelPrice, Prediction
+        from sqlalchemy import and_
+
+        price_date = date.fromisoformat(prices.get("date", date.today().isoformat()))
+
+        fuel_types = ["extra", "ecopais", "super_95", "diesel"]
+        registered = []
+
+        for ft in fuel_types:
+            if ft not in prices:
+                continue
+
+            new_price = float(prices[ft])
+
+            # Buscar precio anterior
+            prev = db.query(FuelPrice).filter(
+                and_(
+                    FuelPrice.fuel_type == ft,
+                    FuelPrice.date < price_date,
+                )
+            ).order_by(FuelPrice.date.desc()).first()
+
+            prev_price = prev.price if prev else None
+            change_pct = None
+            band_status = None
+
+            if prev_price and prev_price > 0:
+                change_pct = round((new_price - prev_price) / prev_price * 100, 2)
+                fuel_cfg = settings.FUEL_TYPES.get(ft, {})
+                if fuel_cfg.get("band_system"):
+                    if change_pct >= 4.9:
+                        band_status = "TECHO"
+                    elif change_pct <= -9.9:
+                        band_status = "PISO"
+                    else:
+                        band_status = "DENTRO"
+                else:
+                    band_status = "LIBRE"
+
+            # Upsert
+            existing = db.query(FuelPrice).filter(
+                and_(FuelPrice.date == price_date, FuelPrice.fuel_type == ft)
+            ).first()
+
+            if existing:
+                existing.price = new_price
+                existing.previous_price = prev_price
+                existing.change_percent = change_pct
+                existing.band_status = band_status
+            else:
+                db.add(FuelPrice(
+                    date=price_date,
+                    fuel_type=ft,
+                    price=new_price,
+                    previous_price=prev_price,
+                    change_percent=change_pct,
+                    band_status=band_status,
+                ))
+
+            registered.append({
+                "fuel_type": ft,
+                "price": new_price,
+                "previous_price": prev_price,
+                "change_pct": change_pct,
+                "band_status": band_status,
+            })
+
+        db.commit()
+
+        # Actualizar predicciones pendientes
+        predictions_updated = 0
+        pending = db.query(Prediction).filter(
+            and_(
+                Prediction.target_date == price_date,
+                Prediction.actual_price.is_(None),
+            )
+        ).all()
+
+        for pred in pending:
+            actual = next((r for r in registered if r["fuel_type"] == pred.fuel_type), None)
+            if actual:
+                pred.actual_price = actual["price"]
+                if pred.predicted_price > 0 and actual["price"] > 0:
+                    error = abs(pred.predicted_price - actual["price"]) / actual["price"] * 100
+                    pred.accuracy_pct = round(100 - error, 2)
+                predictions_updated += 1
+
+        if predictions_updated > 0:
+            db.commit()
+
+        return {
+            "date": price_date.isoformat(),
+            "registered": registered,
+            "predictions_updated": predictions_updated,
+        }
+    except Exception as e:
+        logger.error("Error registrando precios: %s", e)
         raise HTTPException(status_code=500, detail=str(e))

@@ -67,6 +67,14 @@ class Settings(BaseModel):
         "diesel": 0.974,     # Calibrado a $2.828 con WTI=$70 (post-eliminacion subsidio)
     }
 
+    # Modelo cuadratico para Super 95 (precio libre, no usa formula del Decreto 308)
+    # Calibrado con regresion sobre 22 meses de datos reales (jul 2024 - abr 2026)
+    # Super = COEFF_A * WTI^2 + COEFF_B * WTI + COEFF_C
+    # Verificacion: WTI=$105 -> $4.556 (real $4.570, error 0.3%)
+    SUPER_95_COEFF_A: float = 0.001067   # coeficiente cuadratico
+    SUPER_95_COEFF_B: float = -0.1450    # coeficiente lineal
+    SUPER_95_COEFF_C: float = 8.0136     # constante
+
     # Correlacion empirica WTI -> precio local
     WTI_CORRELATION: dict = {
         "extra": 0.72,

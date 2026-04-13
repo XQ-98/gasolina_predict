@@ -311,6 +311,29 @@ def save_prediction(
     Returns:
         ID de la prediccion creada.
     """
+    # Verificar si ya existe una prediccion para este combustible y fecha
+    existing = db.query(Prediction).filter(
+        Prediction.fuel_type == fuel_type,
+        Prediction.target_date == target_date,
+    ).first()
+
+    if existing:
+        # Actualizar la prediccion existente en lugar de crear duplicado
+        existing.predicted_price = predicted_price
+        existing.approach = approach
+        existing.wti_predicted = wti_predicted
+        existing.band_status = band_status
+        existing.model_weights = model_weights
+        existing.confidence_lower = confidence_lower
+        existing.confidence_upper = confidence_upper
+        existing.created_at = datetime.now()
+        db.commit()
+        logger.info(
+            "Prediccion actualizada: id=%d, %s %s -> $%.3f",
+            existing.id, fuel_type, target_date, predicted_price,
+        )
+        return existing.id
+
     prediction = Prediction(
         fuel_type=fuel_type,
         approach=approach,

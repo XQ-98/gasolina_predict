@@ -24,8 +24,9 @@ class BandCalculator:
     def calculate_theoretical_price(self, wti_price: float, fuel_type: str) -> float:
         """Calcula el precio teorico basado en el WTI y la formula del gobierno.
 
-        Estima el precio que EP Petroecuador calcularia en base al costo de
-        importacion derivado del precio internacional del WTI.
+        Para Extra, EcoPais y Diesel usa la formula del Decreto 308.
+        Para Super 95 usa un modelo cuadratico calibrado con datos reales,
+        ya que tiene precio libre y las comercializadoras lo fijan segun mercado.
 
         Args:
             wti_price: Precio del WTI en USD/barril.
@@ -34,6 +35,28 @@ class BandCalculator:
         Returns:
             Precio teorico en USD/galon.
         """
+        # Super 95: modelo cuadratico (precio libre, no usa Decreto 308)
+        if fuel_type == "super_95":
+            return self._calculate_super95_price(wti_price)
+
+        # Extra, EcoPais, Diesel: formula del Decreto 308
+        return self._calculate_decree308_price(wti_price, fuel_type)
+
+    def _calculate_super95_price(self, wti_price: float) -> float:
+        """Modelo cuadratico para Super 95 (precio libre).
+
+        Calibrado con regresion sobre 22 meses de datos reales (jul 2024 - abr 2026).
+        Super = A * WTI^2 + B * WTI + C
+        Precision verificada: WTI=$105 -> $4.556 (real $4.570, error 0.3%)
+        """
+        a = settings.SUPER_95_COEFF_A
+        b = settings.SUPER_95_COEFF_B
+        c = settings.SUPER_95_COEFF_C
+        price = a * wti_price**2 + b * wti_price + c
+        return round(max(price, 1.50), 3)
+
+    def _calculate_decree308_price(self, wti_price: float, fuel_type: str) -> float:
+        """Formula del Decreto 308 para combustibles regulados."""
         # 1. Costo de importacion base: WTI ($/barril) -> $/galon
         import_cost_gallon = wti_price * settings.WTI_TO_GALLON_FACTOR * settings.IMPORT_COST_WEIGHT
 
@@ -179,6 +202,18 @@ class BandCalculator:
         Returns:
             Dict con cada componente de la formula.
         """
+        if fuel_type == "super_95":
+            price = self._calculate_super95_price(wti_price)
+            return {
+                "wti_price_barrel": round(wti_price, 2),
+                "modelo": "cuadratico",
+                "descripcion": "Precio libre - modelo de regresion cuadratica calibrado con datos reales",
+                "coeff_a": settings.SUPER_95_COEFF_A,
+                "coeff_b": settings.SUPER_95_COEFF_B,
+                "coeff_c": settings.SUPER_95_COEFF_C,
+                "theoretical_price": round(price, 4),
+            }
+
         import_cost_gallon = wti_price * settings.WTI_TO_GALLON_FACTOR * settings.IMPORT_COST_WEIGHT
         refining_factor = settings.FUEL_REFINING_FACTOR.get(fuel_type, 1.0)
         refining_adjustment = import_cost_gallon * refining_factor

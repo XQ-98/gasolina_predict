@@ -13,7 +13,7 @@ export async function fetchCurrentPrices(): Promise<FuelPrice[]> {
     previous_price: p.previous_price,
     change_percent: p.change_pct ?? p.change_percent,
     change_direction: (p.change_pct ?? p.change_percent ?? 0) as number > 0 ? 'SUBE' : (p.change_pct ?? p.change_percent ?? 0) as number < 0 ? 'BAJA' : 'IGUAL',
-    effective_date: data.date || '',
+    effective_date: data.date ? (() => { const d = new Date(data.date + 'T00:00:00'); d.setDate(d.getDate() + 1); return d.toISOString().split('T')[0]; })() : '',
     band_applied: p.band_status || p.band_applied || 'DENTRO',
   }));
 }

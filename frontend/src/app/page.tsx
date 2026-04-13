@@ -6,6 +6,7 @@ import {
   Brain,
   Layers,
   Newspaper,
+  History,
   Loader2,
   RefreshCw,
   Sun,
@@ -25,6 +26,7 @@ import AnalysisPanel from '@/components/AnalysisPanel';
 import ModelMetrics from '@/components/ModelMetrics';
 import ModelComparison from '@/components/ModelComparison';
 import NewsPanel from '@/components/NewsPanel';
+import PredictionHistory from '@/components/PredictionHistory';
 import {
   fetchCurrentPrices,
   fetchHistoricalPrices,
@@ -33,7 +35,7 @@ import {
   fetchNews,
 } from '@/lib/api';
 
-type Tab = 'dashboard' | 'prediction' | 'bands' | 'news';
+type Tab = 'dashboard' | 'prediction' | 'bands' | 'history' | 'news';
 
 const fuelTypes = [
   { value: 'extra', label: 'Extra' },
@@ -149,6 +151,7 @@ export default function Home() {
     { id: 'dashboard' as Tab, label: 'Dashboard', icon: BarChart3 },
     { id: 'prediction' as Tab, label: 'Prediccion', icon: Brain },
     { id: 'bands' as Tab, label: 'Sistema de Bandas', icon: Layers },
+    { id: 'history' as Tab, label: 'Historial', icon: History },
     { id: 'news' as Tab, label: 'Noticias', icon: Newspaper },
   ];
 
@@ -538,6 +541,23 @@ export default function Home() {
           <div className="space-y-6">
             <BandSimulator />
             <BandHistory />
+          </div>
+        )}
+
+        {/* ===== HISTORIAL DE PREDICCIONES ===== */}
+        {activeTab === 'history' && (
+          <div className="space-y-6">
+            <div className="card">
+              <h2 className="card-header">
+                Historial de Predicciones
+              </h2>
+              <p className="text-xs text-slate-500 mb-4">
+                Registro de todas las predicciones realizadas por el sistema. Cuando se
+                conocen los precios reales (dia 11), se calcula la precision automaticamente.
+                Un acierto significa que el error fue menor al 2%.
+              </p>
+            </div>
+            <PredictionHistory />
           </div>
         )}
 

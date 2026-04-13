@@ -17,11 +17,40 @@ from datetime import date, timedelta
 from app.config import settings
 from app.services.band_calculator import BandCalculator
 from app.services.data_pipeline import (
-    get_current_prices,
+    get_current_prices as _get_pipeline_prices,
     fetch_fuel_historical_prices,
 )
 
 logger = logging.getLogger(__name__)
+
+
+def _get_current_price(fuel_type: str) -> float:
+    """Obtiene el precio actual vigente del combustible.
+
+    Primero busca en la BD (precio mas reciente en fuel_prices),
+    si no hay BD disponible usa data_pipeline como fallback.
+    """
+    try:
+        from app.config import settings as cfg
+        if cfg.DB_ENABLED:
+            from app.database.connection import SessionLocal
+            from app.database.models import FuelPrice
+            from sqlalchemy import desc
+            db = SessionLocal()
+            try:
+                latest = db.query(FuelPrice).filter(
+                    FuelPrice.fuel_type == fuel_type
+                ).order_by(desc(FuelPrice.date)).first()
+                if latest:
+                    return float(latest.price)
+            finally:
+                db.close()
+    except Exception as e:
+        logger.debug("No se pudo leer precio de BD: %s", e)
+
+    # Fallback a data_pipeline
+    data = _get_pipeline_prices()
+    return data["fuels"].get(fuel_type, {}).get("price", 2.89)
 
 
 class TwoLayerPredictor:
@@ -126,9 +155,8 @@ class TwoLayerPredictor:
         fuel_config = settings.FUEL_TYPES.get(fuel_type, {})
         fuel_name = fuel_config.get("name", fuel_type)
 
-        # Precio actual del combustible
-        current_data = get_current_prices()
-        current_price = current_data["fuels"].get(fuel_type, {}).get("price", 2.89)
+        # Precio actual del combustible (BD primero, luego pipeline)
+        current_price = _get_current_price(fuel_type)
 
         # Capa 1: Predecir WTI
         self._ensure_trained()
@@ -200,9 +228,8 @@ class TwoLayerPredictor:
         fuel_config = settings.FUEL_TYPES.get(fuel_type, {})
         fuel_name = fuel_config.get("name", fuel_type)
 
-        # Precio actual del combustible
-        current_data = get_current_prices()
-        current_price = current_data["fuels"].get(fuel_type, {}).get("price", 2.89)
+        # Precio actual del combustible (BD primero, luego pipeline)
+        current_price = _get_current_price(fuel_type)
 
         # Capa 1: Predecir WTI del primer mes
         self._ensure_trained()
