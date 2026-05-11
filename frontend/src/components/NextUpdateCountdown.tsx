@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, CalendarDays, Bell, TrendingUp, TrendingDown, Minus, Loader2, ChevronDown, ChevronUp, BarChart3, Calculator, Shield } from 'lucide-react';
+import { Clock, CalendarDays, Bell, TrendingUp, TrendingDown, Minus, Loader2, ChevronDown, ChevronUp, BarChart3, Calculator, Shield, RefreshCw } from 'lucide-react';
 import Sigla from './Sigla';
 import {
   differenceInDays,
@@ -41,11 +41,33 @@ interface QuickForecast {
   detail?: ForecastDetail;
 }
 
+const CACHE_KEY = 'gaspredict_forecast_cache';
+
+function loadCachedForecast(): QuickForecast[] | null {
+  try {
+    const raw = localStorage.getItem(CACHE_KEY);
+    if (!raw) return null;
+    const { date, data } = JSON.parse(raw);
+    // Cache válido solo si es del mismo día
+    if (date === new Date().toISOString().split('T')[0]) return data;
+  } catch { /* ignore */ }
+  return null;
+}
+
+function saveForecastCache(data: QuickForecast[]) {
+  try {
+    localStorage.setItem(CACHE_KEY, JSON.stringify({
+      date: new Date().toISOString().split('T')[0],
+      data,
+    }));
+  } catch { /* ignore */ }
+}
+
 async function fetchQuickForecast(): Promise<QuickForecast[]> {
   const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
-  const fuels = ['extra', 'ecopais', 'diesel'];
+  const fuels = ['extra', 'ecopais', 'diesel', 'super_95'];
   const results: QuickForecast[] = [];
-  const labels: Record<string, string> = { extra: 'Extra', ecopais: 'EcoPais', diesel: 'Diesel' };
+  const labels: Record<string, string> = { extra: 'Extra', ecopais: 'EcoPais', diesel: 'Diesel', super_95: 'Super 95' };
 
   for (const fuel of fuels) {
     try {
@@ -63,16 +85,11 @@ async function fetchQuickForecast(): Promise<QuickForecast[]> {
       const estimated = pred.price;
       const changePct = current > 0 ? ((estimated - current) / current) * 100 : 0;
 
-      // Determinar probabilidad basada en confianza del modelo
-      const ci = data.confidence_interval;
-      let probability: 'alta' | 'media' | 'baja' = 'media';
-      if (ci?.lower?.[0] && ci?.upper?.[0]) {
-        const range = ci.upper[0] - ci.lower[0];
-        const rangePct = current > 0 ? (range / current) * 100 : 0;
-        if (rangePct < 4) probability = 'alta';
-        else if (rangePct < 8) probability = 'media';
-        else probability = 'baja';
-      }
+      // Probabilidad basada en MAPE historico real por combustible
+      // Extra/EcoPais/Diesel: formula determinista -> siempre Alta
+      // Super 95: precio libre, modelo con MAPE ~3.6% -> siempre Media
+      const freeMarket = fuel === 'super_95';
+      const probability: 'alta' | 'media' | 'baja' = freeMarket ? 'media' : 'alta';
 
       // Extraer detalles de las 2 capas si existen
       const l1 = data.layer_1_wti?.detail || data.layer_1_wti;
@@ -129,6 +146,7 @@ export default function NextUpdateCountdown() {
   const [forecast, setForecast] = useState<QuickForecast[]>([]);
   const [loadingForecast, setLoadingForecast] = useState(true);
   const [expandedFuel, setExpandedFuel] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(new Date()), 60000);
@@ -136,11 +154,26 @@ export default function NextUpdateCountdown() {
   }, []);
 
   useEffect(() => {
+    const cached = loadCachedForecast();
+    if (cached && cached.length > 0) {
+      setForecast(cached);
+      setLoadingForecast(false);
+      return;
+    }
     fetchQuickForecast()
-      .then(setForecast)
+      .then((data) => { setForecast(data); saveForecastCache(data); })
       .catch(() => {})
       .finally(() => setLoadingForecast(false));
   }, []);
+
+  function handleRefresh() {
+    setRefreshing(true);
+    setLoadingForecast(true);
+    fetchQuickForecast()
+      .then((data) => { setForecast(data); saveForecastCache(data); })
+      .catch(() => {})
+      .finally(() => { setLoadingForecast(false); setRefreshing(false); });
+  }
 
   const nextUpdate = getNextUpdateDate(now);
   const isToday = isSameDay(now, nextUpdate);
@@ -162,6 +195,12 @@ export default function NextUpdateCountdown() {
   const progress = totalDaysInRange > 0 ? Math.min((daysPassed / totalDaysInRange) * 100, 100) : 0;
 
   if (isToday) {
+    const dirColors = {
+      SUBE: 'text-red-400',
+      BAJA: 'text-emerald-400',
+      IGUAL: 'text-slate-400',
+    };
+
     return (
       <div className="card border-2 border-gasolina-500/50">
         <div className="flex items-center gap-3">
@@ -180,6 +219,179 @@ export default function NextUpdateCountdown() {
         <p className="text-sm text-gasolina-400 mt-3">
           Los nuevos precios de combustibles entran en vigencia hoy, dia 11.
         </p>
+
+        {/* Prediccion del dia */}
+        <div className="mt-4 pt-4 border-t border-gasolina-500/30">
+          <div className="flex items-center justify-between mb-3">
+            <h4 className="text-xs text-slate-500 uppercase tracking-wider font-medium">
+              Prediccion para hoy
+            </h4>
+            <button
+              onClick={handleRefresh}
+              disabled={refreshing}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+            >
+              <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+              Recalcular
+            </button>
+          </div>
+          {loadingForecast ? (
+            <div className="flex items-center justify-center py-3">
+              <Loader2 className="w-4 h-4 text-petroleo-500 animate-spin" />
+              <span className="text-xs text-slate-500 ml-2">Calculando...</span>
+            </div>
+          ) : forecast.length === 0 ? (
+            <p className="text-xs text-slate-500">No se pudo calcular la estimacion</p>
+          ) : (
+            <div className="space-y-2">
+              {forecast.map((f) => {
+                const probColors = {
+                  alta: { bg: 'bg-red-900/20', text: 'text-red-400', border: 'border-red-800/50' },
+                  media: { bg: 'bg-yellow-900/20', text: 'text-yellow-400', border: 'border-yellow-800/50' },
+                  baja: { bg: 'bg-emerald-900/20', text: 'text-emerald-400', border: 'border-emerald-800/50' },
+                };
+                const dirColors2 = {
+                  SUBE: 'text-red-400',
+                  BAJA: 'text-emerald-400',
+                  IGUAL: 'text-slate-400',
+                };
+                const prob = f.direction === 'SUBE' ? probColors[f.probability] : f.direction === 'BAJA' ? probColors.baja : probColors.media;
+                const isExpanded = expandedFuel === f.fuel;
+                const d = f.detail;
+
+                return (
+                  <div key={f.fuel}>
+                    <button
+                      onClick={() => setExpandedFuel(isExpanded ? null : f.fuel)}
+                      className={`w-full flex items-center justify-between p-3 rounded-lg border transition-all ${prob.bg} ${prob.border} hover:brightness-110 cursor-pointer`}
+                    >
+                      <div className="flex items-center gap-2">
+                        {f.direction === 'SUBE' ? (
+                          <TrendingUp className={`w-4 h-4 ${dirColors2[f.direction]}`} />
+                        ) : f.direction === 'BAJA' ? (
+                          <TrendingDown className={`w-4 h-4 ${dirColors2[f.direction]}`} />
+                        ) : (
+                          <Minus className="w-4 h-4 text-slate-400" />
+                        )}
+                        <div className="text-left">
+                          <span className="text-sm font-medium text-white">{f.label}</span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs text-slate-500">${f.current.toFixed(2)}</span>
+                            <span className="text-xs text-slate-600">→</span>
+                            <span className={`text-xs font-medium ${dirColors2[f.direction]}`}>
+                              ${f.estimated.toFixed(3)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="text-right">
+                          <span className={`text-sm font-semibold ${dirColors2[f.direction]}`}>
+                            {f.direction === 'SUBE' ? '+' : ''}{f.change_pct.toFixed(2)}%
+                          </span>
+                          <div className="flex items-center gap-1 mt-0.5 justify-end">
+                            <span className="text-xs text-slate-500">Prob:</span>
+                            <span className={`text-xs font-medium ${prob.text}`}>
+                              {f.probability.charAt(0).toUpperCase() + f.probability.slice(1)}
+                            </span>
+                          </div>
+                        </div>
+                        {isExpanded ? (
+                          <ChevronUp className="w-4 h-4 text-slate-500" />
+                        ) : (
+                          <ChevronDown className="w-4 h-4 text-slate-500" />
+                        )}
+                      </div>
+                    </button>
+
+                    {isExpanded && d && (
+                      <div className="mt-1 rounded-lg border border-slate-700/50 bg-slate-800/40 p-4 space-y-4 animate-in">
+                        <div className={`rounded-lg p-3 ${prob.bg} border ${prob.border}`}>
+                          <h5 className={`text-sm font-semibold ${dirColors2[f.direction]} mb-2`}>
+                            ¿Por que {f.direction === 'BAJA' ? 'baja' : f.direction === 'SUBE' ? 'sube' : 'se mantiene'}?
+                          </h5>
+                          <p className="text-xs text-slate-300 leading-relaxed">
+                            {f.direction === 'SUBE' ? (
+                              <>
+                                El WTI promedio predicho es <strong className="text-white">${d.wti_predicted.toFixed(2)}/barril</strong>
+                                {d.wti_change_pct > 0 ? `, un aumento del ${d.wti_change_pct.toFixed(1)}%.` : '.'}{' '}
+                                Esto eleva la formula del gobierno a <strong className="text-white">${d.theoretical_price.toFixed(3)}/galon</strong>.
+                                {d.band_status === 'TECHO' ? ` La banda limita la subida a +5%, resultando en $${f.estimated.toFixed(3)}.` : ` El precio queda dentro de la banda permitida.`}
+                              </>
+                            ) : f.direction === 'BAJA' ? (
+                              <>
+                                El WTI predicho de <strong className="text-white">${d.wti_predicted.toFixed(2)}/barril</strong> genera un precio teorico de <strong className="text-white">${d.theoretical_price.toFixed(3)}/galon</strong>, menor al actual. La banda limita la bajada al -10%, resultando en ${f.estimated.toFixed(3)}.
+                              </>
+                            ) : (
+                              <>El WTI se mantiene estable y la formula no genera un cambio significativo.</>
+                            )}
+                          </p>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <BarChart3 className="w-3.5 h-3.5 text-blue-400" />
+                            <h5 className="text-xs text-blue-400 font-semibold uppercase tracking-wider">Precio del Petroleo (WTI)</h5>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-slate-900/50 rounded p-2">
+                              <span className="text-xs text-slate-500 block">Actual</span>
+                              <span className="text-sm font-semibold text-white">${d.wti_current.toFixed(2)}</span>
+                            </div>
+                            <div className="bg-slate-900/50 rounded p-2">
+                              <span className="text-xs text-slate-500 block">Predicho (avg 1-10)</span>
+                              <span className={`text-sm font-semibold ${d.wti_change_pct > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
+                                ${d.wti_predicted.toFixed(2)}
+                              </span>
+                            </div>
+                            <div className="bg-slate-900/50 rounded p-2">
+                              <span className="text-xs text-slate-500 block">Rango IC 95%</span>
+                              <span className="text-xs font-medium text-slate-300">
+                                ${d.wti_confidence.lower.toFixed(1)} - ${d.wti_confidence.upper.toFixed(1)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="flex items-center gap-2 mb-2">
+                            <Shield className="w-3.5 h-3.5 text-petroleo-400" />
+                            <h5 className="text-xs text-petroleo-400 font-semibold uppercase tracking-wider">Sistema de Bandas</h5>
+                          </div>
+                          <div className="bg-slate-900/50 rounded p-2">
+                            <div className="grid grid-cols-3 gap-2">
+                              <div className="text-center">
+                                <span className="text-xs text-emerald-500 block">Piso (-10%)</span>
+                                <span className="text-xs font-semibold text-slate-300">${d.min_price.toFixed(3)}</span>
+                              </div>
+                              <div className="text-center">
+                                <span className={`text-xs block ${d.band_status === 'TECHO' ? 'text-red-400' : d.band_status === 'PISO' ? 'text-emerald-400' : 'text-yellow-400'}`}>
+                                  {d.band_status === 'TECHO' ? 'Tope ↑' : d.band_status === 'PISO' ? 'Tope ↓' : 'Dentro'}
+                                </span>
+                                <span className="text-sm font-bold text-white">${f.estimated.toFixed(3)}</span>
+                              </div>
+                              <div className="text-center">
+                                <span className="text-xs text-red-500 block">Techo (+5%)</span>
+                                <span className="text-xs font-semibold text-slate-300">${d.max_price.toFixed(3)}</span>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isExpanded && !d && (
+                      <div className="mt-1 rounded-lg border border-slate-700/50 bg-slate-800/40 p-4">
+                        <p className="text-xs text-slate-500">Detalle no disponible.</p>
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+              <p className="text-xs text-slate-600 italic mt-1">* Haz clic en un combustible para ver el detalle.</p>
+            </div>
+          )}
+        </div>
       </div>
     );
   }
@@ -238,9 +450,19 @@ export default function NextUpdateCountdown() {
 
       {/* Mini prediccion */}
       <div className="mt-4 pt-4 border-t border-slate-700/50">
-        <h4 className="text-xs text-slate-500 uppercase tracking-wider mb-3 font-medium">
-          Estimacion para el {format(nextUpdate, "d 'de' MMMM", { locale: es })}
-        </h4>
+        <div className="flex items-center justify-between mb-3">
+          <h4 className="text-xs text-slate-500 uppercase tracking-wider font-medium">
+            Estimacion para el {format(nextUpdate, "d 'de' MMMM", { locale: es })}
+          </h4>
+          <button
+            onClick={handleRefresh}
+            disabled={refreshing}
+            className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-3 h-3 ${refreshing ? 'animate-spin' : ''}`} />
+            Recalcular
+          </button>
+        </div>
         {loadingForecast ? (
           <div className="flex items-center justify-center py-3">
             <Loader2 className="w-4 h-4 text-petroleo-500 animate-spin" />

@@ -409,6 +409,16 @@ class TwoLayerPredictor:
 
         return dates
 
+    # MAPE historico observado por tipo de combustible (error real verificado)
+    # Extra/EcoPais/Diesel: error < 0.5% (formula determinista + banda)
+    # Super 95: error ~3.6% (precio libre, modelo hibrido WTI+tendencia, 34 meses)
+    _FUEL_MAPE: dict = {
+        "extra": 0.005,
+        "ecopais": 0.005,
+        "diesel": 0.005,
+        "super_95": 0.036,
+    }
+
     def _calculate_fuel_ci(
         self,
         wti_avg: float,
@@ -421,17 +431,8 @@ class TwoLayerPredictor:
     ) -> tuple[list[float], list[float]]:
         """Calcula intervalos de confianza del precio del combustible.
 
-        Propaga la incertidumbre del WTI a traves de la formula del gobierno
-        y el sistema de bandas, expandiendo el intervalo para meses mas lejanos.
-
-        Args:
-            wti_avg: WTI promedio predicho para el mes 1.
-            wti_lower: Limite inferior del CI del WTI (mes 1).
-            wti_upper: Limite superior del CI del WTI (mes 1).
-            monthly_drift: Drift mensual del WTI.
-            months: Numero de meses.
-            current_price: Precio actual del combustible.
-            fuel_type: Tipo de combustible.
+        Usa MAPE historico fijo por tipo de combustible (determinista).
+        El intervalo crece con el horizonte de prediccion.
 
         Returns:
             Tupla (lower_prices, upper_prices) con listas de precios CI.
@@ -439,33 +440,24 @@ class TwoLayerPredictor:
         lower_prices = []
         upper_prices = []
 
-        # La incertidumbre crece con el horizonte
-        wti_spread_m1 = (wti_upper - wti_lower) / 2.0 if wti_upper > wti_lower else wti_avg * 0.05
+        base_mape = self._FUEL_MAPE.get(fuel_type, 0.010)
 
-        prev_lower = current_price
-        prev_upper = current_price
-
+        prev_price = current_price
         for m in range(months):
-            # WTI central para este mes
             if m == 0:
                 wti_center = wti_avg
             else:
                 wti_center = wti_avg + monthly_drift * m
 
-            # Expandir incertidumbre con raiz cuadrada del horizonte
-            expansion = (1.0 + m * 0.3)  # Crece ~30% por mes adicional
-            wti_lo = wti_center - wti_spread_m1 * expansion
-            wti_hi = wti_center + wti_spread_m1 * expansion
+            fuel_result = self._wti_to_fuel_price(max(wti_center, 10.0), prev_price, fuel_type)
+            center_price = fuel_result["price"]
 
-            # Convertir WTI a precio de combustible
-            lower_result = self._wti_to_fuel_price(max(wti_lo, 10.0), prev_lower, fuel_type)
-            upper_result = self._wti_to_fuel_price(wti_hi, prev_upper, fuel_type)
+            # Incertidumbre crece con la raiz cuadrada del horizonte
+            uncertainty = base_mape * (1.0 + 0.5 * m) ** 0.5
+            lower_prices.append(round(center_price * (1 - uncertainty), 4))
+            upper_prices.append(round(center_price * (1 + uncertainty), 4))
 
-            lower_prices.append(lower_result["price"])
-            upper_prices.append(upper_result["price"])
-
-            prev_lower = lower_result["price"]
-            prev_upper = upper_result["price"]
+            prev_price = center_price
 
         return lower_prices, upper_prices
 

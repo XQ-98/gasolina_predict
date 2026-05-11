@@ -59,6 +59,7 @@ export default function Home() {
   // Settings
   const [theme, setTheme] = useState<'dark' | 'light'>('dark');
   const [selectedFuel, setSelectedFuel] = useState('extra');
+  const [predictionFuel, setPredictionFuel] = useState('extra');
   const [historyYears, setHistoryYears] = useState(5);
   const [horizonMonths, setHorizonMonths] = useState(6);
 
@@ -101,19 +102,45 @@ export default function Home() {
     }
   }, [historyYears]);
 
-  // Load prediction
+  // Load prediction — cachea en localStorage por (fuel, months) con TTL de 1 día
+  const PRED_CACHE_PREFIX = 'gaspredict_pred_';
   const loadPrediction = async () => {
     setLoadingKey('prediction', true);
     setError(null);
     try {
       const data = await fetchPrediction(selectedFuel, horizonMonths);
       setPrediction(data);
+      // Guardar en cache
+      try {
+        localStorage.setItem(
+          `${PRED_CACHE_PREFIX}${selectedFuel}_${horizonMonths}`,
+          JSON.stringify({ date: new Date().toISOString().split('T')[0], data })
+        );
+      } catch { /* ignore */ }
     } catch (e: any) {
       setError(e.message);
     } finally {
       setLoadingKey('prediction', false);
     }
   };
+
+  // Cargar prediccion desde cache al cambiar fuel/months sin llamar al API
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(`${PRED_CACHE_PREFIX}${selectedFuel}_${horizonMonths}`);
+      if (!raw) { setPrediction(null); return; }
+      const { date, data } = JSON.parse(raw);
+      if (date === new Date().toISOString().split('T')[0]) {
+        setPrediction(data);
+      } else {
+        localStorage.removeItem(`${PRED_CACHE_PREFIX}${selectedFuel}_${horizonMonths}`);
+        setPrediction(null);
+      }
+    } catch {
+      setPrediction(null);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedFuel, horizonMonths]);
 
   // Load analysis
   const loadAnalysis = useCallback(async () => {

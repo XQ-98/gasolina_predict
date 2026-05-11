@@ -512,34 +512,37 @@ def _save_predictions_to_db(db: Session, result: dict, fuel_type: str, approach:
         if isinstance(wti_data, dict):
             wti_predicted = wti_data.get("predicted_avg") or wti_data.get("predicted_price")
 
-        for i, pred in enumerate(predictions):
-            target_date_str = pred.get("date", "")
-            if not target_date_str:
-                continue
+        # Solo guardar el primer mes (proximo ajuste real).
+        # Los meses 2+ son extrapolaciones especulativas sin valor de seguimiento.
+        if not predictions:
+            return
+        pred = predictions[0]
+        target_date_str = pred.get("date", "")
+        if not target_date_str:
+            return
 
-            try:
-                target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
-            except (ValueError, TypeError):
-                continue
+        try:
+            target_date = datetime.strptime(target_date_str, "%Y-%m-%d").date()
+        except (ValueError, TypeError):
+            return
 
-            predicted_price = pred.get("price", 0)
-            band_status = pred.get("band_status")
+        predicted_price = pred.get("price", 0)
+        band_status = pred.get("band_status")
+        conf_lower = confidence_lower_list[0] if confidence_lower_list else None
+        conf_upper = confidence_upper_list[0] if confidence_upper_list else None
 
-            conf_lower = confidence_lower_list[i] if i < len(confidence_lower_list) else None
-            conf_upper = confidence_upper_list[i] if i < len(confidence_upper_list) else None
-
-            crud.save_prediction(
-                db=db,
-                fuel_type=fuel_type,
-                approach=approach,
-                target_date=target_date,
-                predicted_price=predicted_price,
-                wti_predicted=wti_predicted,
-                band_status=band_status,
-                model_weights=weights,
-                confidence_lower=conf_lower,
-                confidence_upper=conf_upper,
-            )
+        crud.save_prediction(
+            db=db,
+            fuel_type=fuel_type,
+            approach=approach,
+            target_date=target_date,
+            predicted_price=predicted_price,
+            wti_predicted=wti_predicted,
+            band_status=band_status,
+            model_weights=weights,
+            confidence_lower=conf_lower,
+            confidence_upper=conf_upper,
+        )
     except Exception as e:
         logger.warning("Error guardando predicciones en BD: %s", e)
 

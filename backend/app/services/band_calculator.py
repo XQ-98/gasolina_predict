@@ -17,6 +17,15 @@ from datetime import date
 
 from app.config import settings
 
+# Fecha de referencia del modelo (jun-2023 = mes 0)
+_MODEL_BASE_DATE = date(2023, 6, 1)
+
+def _months_since_base(d: date = None) -> int:
+    """Calcula meses transcurridos desde jun-2023."""
+    if d is None:
+        d = date.today()
+    return (d.year - _MODEL_BASE_DATE.year) * 12 + (d.month - _MODEL_BASE_DATE.month)
+
 
 class BandCalculator:
     """Implementa la logica del Decreto 308 - Sistema de bandas de precios."""
@@ -42,17 +51,21 @@ class BandCalculator:
         # Extra, EcoPais, Diesel: formula del Decreto 308
         return self._calculate_decree308_price(wti_price, fuel_type)
 
-    def _calculate_super95_price(self, wti_price: float) -> float:
-        """Modelo cuadratico para Super 95 (precio libre).
+    def _calculate_super95_price(self, wti_price: float, target_month_offset: int = 1) -> float:
+        """Modelo hibrido para Super 95 (precio libre).
 
-        Calibrado con regresion sobre 22 meses de datos reales (jul 2024 - abr 2026).
-        Super = A * WTI^2 + B * WTI + C
-        Precision verificada: WTI=$105 -> $4.556 (real $4.570, error 0.3%)
+        Regresion multiple calibrada con 34 meses reales (jun-2023 a abr-2026).
+        Super = WTI_COEFF*WTI + TIME_COEFF*mes + INTERCEPT
+        MAPE=3.6% (mejor que lineal simple MAPE=7%).
+        target_month_offset: cuantos meses adelante se predice (1=proximo mes).
         """
-        a = settings.SUPER_95_COEFF_A
-        b = settings.SUPER_95_COEFF_B
-        c = settings.SUPER_95_COEFF_C
-        price = a * wti_price**2 + b * wti_price + c
+        current_month = _months_since_base()
+        target_month = current_month + target_month_offset
+        price = (
+            settings.SUPER_95_WTI_COEFF * wti_price
+            + settings.SUPER_95_TIME_COEFF * target_month
+            + settings.SUPER_95_INTERCEPT
+        )
         return round(max(price, 1.50), 3)
 
     def _calculate_decree308_price(self, wti_price: float, fuel_type: str) -> float:
@@ -206,11 +219,12 @@ class BandCalculator:
             price = self._calculate_super95_price(wti_price)
             return {
                 "wti_price_barrel": round(wti_price, 2),
-                "modelo": "cuadratico",
-                "descripcion": "Precio libre - modelo de regresion cuadratica calibrado con datos reales",
-                "coeff_a": settings.SUPER_95_COEFF_A,
-                "coeff_b": settings.SUPER_95_COEFF_B,
-                "coeff_c": settings.SUPER_95_COEFF_C,
+                "modelo": "hibrido (WTI + tendencia temporal)",
+                "descripcion": "Precio libre - regresion multiple calibrada con 34 meses de datos reales",
+                "wti_coeff": settings.SUPER_95_WTI_COEFF,
+                "time_coeff": settings.SUPER_95_TIME_COEFF,
+                "intercept": settings.SUPER_95_INTERCEPT,
+                "mape_historico": "3.6%",
                 "theoretical_price": round(price, 4),
             }
 

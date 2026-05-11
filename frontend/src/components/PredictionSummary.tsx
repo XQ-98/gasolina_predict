@@ -37,25 +37,17 @@ export default function PredictionSummary({ prediction, currentPrice }: Predicti
   const avgSecond = secondHalf.reduce((a, b) => a + b.predicted_price, 0) / (secondHalf.length || 1);
   const trendUp = avgSecond > avgFirst;
 
-  // Confianza
+  // Confianza basada en MAPE historico real por tipo de combustible:
+  // Extra/EcoPais/Diesel: formula determinista del Decreto 308 -> Alta (<0.5% error)
+  // Super 95: precio libre de mercado, modelo hibrido -> Moderada (~3.6% error)
+  const freeMarket = prediction.fuel_type === 'super_95';
+  const confidence = freeMarket ? 'Moderada' : 'Alta';
+  const confidenceColor = freeMarket ? 'text-yellow-400' : 'text-emerald-400';
   const lastUpper = lastPred.upper_bound;
   const lastLower = lastPred.lower_bound;
   const uncertainty = lastPred.predicted_price > 0
     ? ((lastUpper - lastLower) / lastPred.predicted_price) * 100
     : 0;
-
-  let confidence: string;
-  let confidenceColor: string;
-  if (uncertainty < 5) {
-    confidence = 'Alta';
-    confidenceColor = 'text-emerald-400';
-  } else if (uncertainty < 15) {
-    confidence = 'Moderada';
-    confidenceColor = 'text-yellow-400';
-  } else {
-    confidence = 'Baja';
-    confidenceColor = 'text-red-400';
-  }
 
   // Bandas
   const techoCount = preds.filter((p) => p.band_status === 'TECHO').length;

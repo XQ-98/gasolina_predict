@@ -380,6 +380,8 @@ class WTIDailyPredictor:
         try:
             self._import_tf()
             tf = self._tf
+            tf.random.set_seed(42)
+            np.random.seed(42)
 
             seq_len = self._lstm_sequence_length
 
