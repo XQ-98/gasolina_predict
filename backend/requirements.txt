@@ -16,3 +16,5 @@ requests
 sqlalchemy==2.0.36
 psycopg2-binary==2.9.10
 alembic==1.14.0
+apscheduler==3.10.4
+beautifulsoup4==4.12.3

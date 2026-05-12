@@ -137,6 +137,24 @@ export async function fetchBandHistory(fuelType?: string): Promise<BandHistoryEn
   }));
 }
 
+export async function fetchLatestPrices(): Promise<{
+  success: boolean;
+  message: string;
+  source: string | null;
+  date?: string;
+  prices: Record<string, number>;
+  saved: string[];
+  predictions_updated: number;
+  hint?: string;
+}> {
+  const res = await fetch(`${API_BASE}/api/prices/fetch-latest`, { method: 'POST' });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || 'Error al obtener precios automaticamente');
+  }
+  return res.json();
+}
+
 export async function fetchNews(): Promise<NewsArticle[]> {
   const res = await fetch(`${API_BASE}/api/news`);
   if (!res.ok) throw new Error('Error al obtener noticias');

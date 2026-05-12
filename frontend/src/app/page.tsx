@@ -33,6 +33,7 @@ import {
   fetchPrediction,
   fetchAnalysis,
   fetchNews,
+  fetchLatestPrices,
 } from '@/lib/api';
 
 type Tab = 'dashboard' | 'prediction' | 'bands' | 'history' | 'news';
@@ -62,6 +63,13 @@ export default function Home() {
   const [predictionFuel, setPredictionFuel] = useState('extra');
   const [historyYears, setHistoryYears] = useState(5);
   const [horizonMonths, setHorizonMonths] = useState(6);
+  const [fetchPricesResult, setFetchPricesResult] = useState<{
+    success: boolean;
+    message: string;
+    source?: string | null;
+    prices?: Record<string, number>;
+    saved?: string[];
+  } | null>(null);
 
   const setLoadingKey = (key: string, value: boolean) => {
     setLoading((prev) => ({ ...prev, [key]: value }));
@@ -154,6 +162,24 @@ export default function Home() {
       setLoadingKey('analysis', false);
     }
   }, []);
+
+  // Fetch prices manually
+  const handleFetchPrices = async () => {
+    setLoadingKey('fetchPrices', true);
+    setFetchPricesResult(null);
+    try {
+      const result = await fetchLatestPrices();
+      setFetchPricesResult(result);
+      if (result.success && result.saved && result.saved.length > 0) {
+        // Recargar precios actuales si se guardaron nuevos datos
+        loadCurrentPrices();
+      }
+    } catch (e: any) {
+      setFetchPricesResult({ success: false, message: e.message });
+    } finally {
+      setLoadingKey('fetchPrices', false);
+    }
+  };
 
   // Load news
   const loadNews = useCallback(async () => {
@@ -286,6 +312,63 @@ export default function Home() {
             ) : currentPrices ? (
               <FuelPriceCards prices={currentPrices} />
             ) : null}
+
+            {/* Fetch Prices Button */}
+            <div className="card">
+              <div className="flex items-center justify-between flex-wrap gap-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-white">Actualizar Precios</h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Obtiene los precios oficiales desde EP Petroecuador automaticamente.
+                    Los precios se publican el dia 11 de cada mes.
+                  </p>
+                </div>
+                <button
+                  onClick={handleFetchPrices}
+                  disabled={loading.fetchPrices}
+                  className="btn-secondary flex items-center gap-2 whitespace-nowrap"
+                >
+                  {loading.fetchPrices ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Consultando...
+                    </>
+                  ) : (
+                    <>
+                      <RefreshCw className="w-4 h-4" />
+                      Obtener Precios
+                    </>
+                  )}
+                </button>
+              </div>
+
+              {fetchPricesResult && (
+                <div className={`mt-3 rounded-lg p-3 text-sm ${
+                  fetchPricesResult.success
+                    ? 'bg-emerald-900/20 border border-emerald-800/50 text-emerald-300'
+                    : 'bg-amber-900/20 border border-amber-800/50 text-amber-300'
+                }`}>
+                  <p className="font-medium">{fetchPricesResult.message}</p>
+                  {fetchPricesResult.source && (
+                    <p className="text-xs mt-1 opacity-75">Fuente: {fetchPricesResult.source}</p>
+                  )}
+                  {fetchPricesResult.prices && Object.keys(fetchPricesResult.prices).length > 0 && (
+                    <div className="flex flex-wrap gap-3 mt-2">
+                      {Object.entries(fetchPricesResult.prices).map(([fuel, price]) => (
+                        <span key={fuel} className="text-xs bg-slate-800/60 px-2 py-0.5 rounded">
+                          {fuel}: ${(price as number).toFixed(3)}
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  {!fetchPricesResult.success && (
+                    <p className="text-xs mt-1 opacity-75">
+                      Si los precios no estan en linea, registralos manualmente en el historial.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
 
             {/* WTI Tracker */}
             <WtiTracker />

@@ -982,6 +982,66 @@ async def check_new_prices(
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@router.post("/prices/fetch-latest")
+async def fetch_latest_prices_endpoint(
+    db: Session = Depends(_get_db_or_none),
+) -> dict:
+    """Obtiene los precios mas recientes de combustibles via scraping y los guarda en la BD.
+
+    Intenta en orden:
+    1. EP Petroecuador (fuente oficial)
+    2. Metro Ecuador (noticias del dia 11-12)
+
+    Si encuentra precios, los guarda en fuel_prices y actualiza predicciones pendientes.
+    """
+    from app.services.price_scraper import fetch_latest_prices, save_fetched_prices
+    from datetime import date
+
+    try:
+        # Obtener precios del scraper
+        scrape_result = fetch_latest_prices()
+
+        if not scrape_result["success"] or not scrape_result["prices"]:
+            return {
+                "success": False,
+                "message": scrape_result.get("message", "No se pudieron obtener precios automaticamente."),
+                "source": scrape_result.get("source"),
+                "prices": {},
+                "saved": [],
+                "predictions_updated": 0,
+                "hint": "Puede registrar los precios manualmente via POST /api/prices/register",
+            }
+
+        prices = scrape_result["prices"]
+
+        if db is None:
+            return {
+                "success": True,
+                "message": "Precios obtenidos pero no guardados (BD no disponible).",
+                "source": scrape_result["source"],
+                "prices": prices,
+                "saved": [],
+                "predictions_updated": 0,
+            }
+
+        # Guardar en BD usando el dia 11 del mes indicado
+        price_date = date.fromisoformat(scrape_result["date"]).replace(day=11)
+        save_result = save_fetched_prices(prices, price_date, db)
+
+        return {
+            "success": True,
+            "message": scrape_result["message"],
+            "source": scrape_result["source"],
+            "date": price_date.isoformat(),
+            "prices": prices,
+            "saved": save_result["saved"],
+            "predictions_updated": save_result["predictions_updated"],
+        }
+    except Exception as e:
+        logger.error("Error en fetch-latest: %s", e, exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @router.post("/prices/register")
 async def register_new_prices(
     prices: dict,
