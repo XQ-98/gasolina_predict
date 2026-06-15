@@ -142,13 +142,15 @@ function getNextUpdateDate(now: Date): Date {
 }
 
 export default function NextUpdateCountdown() {
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
   const [forecast, setForecast] = useState<QuickForecast[]>([]);
   const [loadingForecast, setLoadingForecast] = useState(true);
   const [expandedFuel, setExpandedFuel] = useState<string | null>(null);
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
+    // Inicializar fecha solo en el cliente para evitar mismatch SSR
+    setNow(new Date());
     const interval = setInterval(() => setNow(new Date()), 60000);
     return () => clearInterval(interval);
   }, []);
@@ -173,6 +175,17 @@ export default function NextUpdateCountdown() {
       .then((data) => { setForecast(data); saveForecastCache(data); })
       .catch(() => {})
       .finally(() => { setLoadingForecast(false); setRefreshing(false); });
+  }
+
+  // Mientras el cliente no hidrate, mostrar skeleton
+  if (!now) {
+    return (
+      <div className="card animate-pulse">
+        <div className="h-10 bg-slate-700/50 rounded w-1/2 mb-4" />
+        <div className="h-2 bg-slate-700/50 rounded w-full mb-2" />
+        <div className="h-2 bg-slate-700/50 rounded w-3/4" />
+      </div>
+    );
   }
 
   const nextUpdate = getNextUpdateDate(now);

@@ -1,25 +1,67 @@
-version: "3.9"
-
 services:
-  postgres:
-    image: postgres:16
-    container_name: gaspredict_db
+  # ==================== PostgreSQL ====================
+  db:
+    image: postgres:16-alpine
+    container_name: gaspredict-postgres
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: gaspredict
-      POSTGRES_USER: gaspredict
-      POSTGRES_PASSWORD: gaspredict2026
+      POSTGRES_USER: ${POSTGRES_USER:-gaspredict}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-gaspredict2026}
+      POSTGRES_DB: ${POSTGRES_DB:-gaspredict}
     ports:
       - "5436:5432"
     volumes:
       - gaspredict_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U gaspredict -d gaspredict"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 30s
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-gaspredict} -d ${POSTGRES_DB:-gaspredict}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 15s
+    networks:
+      - gaspredict_network
+
+  # ==================== Backend FastAPI ====================
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: gaspredict-backend
     restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-gaspredict}:${POSTGRES_PASSWORD:-gaspredict2026}@db:5432/${POSTGRES_DB:-gaspredict}
+      ENVIRONMENT: ${ENVIRONMENT:-production}
+    ports:
+      - "8001:8001"
+    networks:
+      - gaspredict_network
+
+  # ==================== Frontend Next.js ====================
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8001}
+    container_name: gaspredict-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3001:3001"
+    environment:
+      NODE_ENV: production
+    networks:
+      - gaspredict_network
 
 volumes:
   gaspredict_data:
-    driver: local
+    name: gaspredict_data
+
+networks:
+  gaspredict_network:
+    name: gaspredict_network
+    driver: bridge

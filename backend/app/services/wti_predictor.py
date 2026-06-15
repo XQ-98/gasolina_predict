@@ -65,10 +65,12 @@ class WTIDailyPredictor:
     # ------------------------------------------------------------------
 
     def fetch_and_prepare_data(self, years: int = 5) -> pd.DataFrame:
-        """Obtiene datos diarios del WTI desde Yahoo Finance.
+        """Obtiene datos diarios del WTI.
 
-        Si la descarga falla, genera datos demo con un random walk realista
-        alrededor de $70 con volatilidad tipica del crudo (~2% diario).
+        Orden de prioridad:
+        1. Yahoo Finance (yfinance) — fuente primaria
+        2. Base de datos local (tabla wti_daily) — fallback si Docker bloquea internet
+        3. Datos demo con random walk — ultimo recurso
 
         Args:
             years: Anos de historia a descargar.
@@ -79,6 +81,7 @@ class WTIDailyPredictor:
         end = datetime.now()
         start = end - timedelta(days=years * 365)
 
+        # 1. Intentar Yahoo Finance
         try:
             import yfinance as yf
 
@@ -105,7 +108,7 @@ class WTIDailyPredictor:
             df = df.sort_values("date").reset_index(drop=True)
             df = df.dropna(subset=["close"])
             logger.info(
-                "Datos WTI diarios descargados: %d filas (%s a %s)",
+                "Datos WTI diarios descargados de Yahoo Finance: %d filas (%s a %s)",
                 len(df),
                 df["date"].iloc[0].strftime("%Y-%m-%d"),
                 df["date"].iloc[-1].strftime("%Y-%m-%d"),
@@ -113,10 +116,47 @@ class WTIDailyPredictor:
             return df
 
         except Exception as e:
-            logger.warning(
-                "No se pudo obtener datos WTI diarios: %s. Generando datos demo.", e
-            )
-            return self._generate_demo_data(years)
+            logger.warning("No se pudo obtener datos WTI de Yahoo Finance: %s", e)
+
+        # 2. Fallback: leer de la BD local (tabla wti_daily)
+        try:
+            from app.config import settings as cfg
+            if cfg.DB_ENABLED:
+                from app.database.connection import SessionLocal
+                from app.database import crud
+                db = SessionLocal()
+                try:
+                    cutoff_days = years * 365
+                    records = crud.get_wti_daily(db, days=cutoff_days)
+                    if records and len(records) >= 100:
+                        df_db = pd.DataFrame(records)
+                        df_db["date"] = pd.to_datetime(df_db["date"])
+                        df_db = df_db.rename(columns={"close_price": "close"})
+                        for col in ["open", "high", "low"]:
+                            if col not in df_db.columns:
+                                df_db[col] = df_db["close"]
+                        if "volume" not in df_db.columns:
+                            df_db["volume"] = 300000.0
+                        df_db = df_db[["date", "close", "open", "high", "low", "volume"]].copy()
+                        df_db = df_db.sort_values("date").reset_index(drop=True)
+                        df_db = df_db.dropna(subset=["close"])
+                        logger.info(
+                            "Datos WTI cargados de BD local: %d filas (%s a %s)",
+                            len(df_db),
+                            df_db["date"].iloc[0].strftime("%Y-%m-%d"),
+                            df_db["date"].iloc[-1].strftime("%Y-%m-%d"),
+                        )
+                        return df_db
+                    else:
+                        logger.warning("BD local tiene pocos datos WTI (%d registros)", len(records) if records else 0)
+                finally:
+                    db.close()
+        except Exception as e:
+            logger.warning("No se pudo leer WTI de BD local: %s", e)
+
+        # 3. Ultimo recurso: datos demo
+        logger.warning("Usando datos demo para WTI — predicciones no seran precisas")
+        return self._generate_demo_data(years)
 
     def _generate_demo_data(self, years: int = 5) -> pd.DataFrame:
         """Genera datos demo realistas del WTI con random walk.
