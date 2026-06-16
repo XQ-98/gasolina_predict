@@ -236,7 +236,14 @@ class TwoLayerPredictor:
         wti_result = self._wti_predictor.predict_wti_avg_for_next_month()
 
         wti_avg_month1 = wti_result["wti_predicted_avg"]
-        wti_current = wti_result.get("wti_current") or self._wti_predictor._last_known_price or wti_avg_month1
+        # wti_current esta en detail (predict_wti_avg_for_next_month lo anida ahi)
+        # El _last_known_price del predictor es el ultimo close real de la BD
+        wti_current = (
+            wti_result.get("wti_current")
+            or wti_result.get("detail", {}).get("wti_current")
+            or self._wti_predictor._last_known_price
+            or wti_avg_month1
+        )
 
         # Anclar al WTI real cuando hay divergencia grande (>8%).
         # Los modelos ML tardan dias en incorporar movimientos bruscos de mercado
@@ -245,9 +252,10 @@ class TwoLayerPredictor:
         if wti_current and wti_current > 0:
             divergence = abs(wti_avg_month1 - wti_current) / wti_current
             if divergence > 0.05:
-                # Blend: 70% precio actual + 30% modelo (el modelo captura tendencia estructural)
-                # Se activa con divergencia >5%: el mercado ya incorporo la nueva info (ej: acuerdo de paz)
-                wti_avg_month1 = round(0.70 * wti_current + 0.30 * wti_avg_month1, 2)
+                # Blend: 80% precio actual + 20% modelo
+                # El precio actual ya incorporo la nueva info del mercado (ej: acuerdo de paz)
+                # El 20% del modelo captura la tendencia estructural de mediano plazo
+                wti_avg_month1 = round(0.80 * wti_current + 0.20 * wti_avg_month1, 2)
                 wti_result["wti_predicted_avg"] = wti_avg_month1
                 logger.info(
                     "WTI divergencia grande (%.1f%%) — anclando al precio actual $%.2f -> WTI ajustado $%.2f",
