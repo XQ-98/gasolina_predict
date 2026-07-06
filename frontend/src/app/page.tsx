@@ -34,6 +34,7 @@ import {
   fetchAnalysis,
   fetchNews,
   fetchLatestPrices,
+  fetchAppInfo,
 } from '@/lib/api';
 
 type Tab = 'dashboard' | 'prediction' | 'bands' | 'history' | 'news';
@@ -70,6 +71,7 @@ export default function Home() {
     prices?: Record<string, number>;
     saved?: string[];
   } | null>(null);
+  const [appVersion, setAppVersion] = useState<string>('1.1.0');
 
   const setLoadingKey = (key: string, value: boolean) => {
     setLoading((prev) => ({ ...prev, [key]: value }));
@@ -83,6 +85,11 @@ export default function Home() {
       document.body.classList.remove('light');
     }
   }, [theme]);
+
+  // App version
+  useEffect(() => {
+    fetchAppInfo().then(({ version }) => setAppVersion(version));
+  }, []);
 
   // Load current prices
   const loadCurrentPrices = useCallback(async () => {
@@ -222,7 +229,12 @@ export default function Home() {
                 <Fuel className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white">GasPredict Ecuador</h1>
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl font-bold text-white">GasPredict Ecuador</h1>
+                  <span className="text-xs bg-petroleo-900/60 text-petroleo-400 border border-petroleo-700/50 px-1.5 py-0.5 rounded font-mono">
+                    v{appVersion}
+                  </span>
+                </div>
                 <p className="text-xs text-slate-400">
                   Prediccion Inteligente de Precios de Combustibles
                 </p>
@@ -720,10 +732,15 @@ export default function Home() {
 
       {/* Footer */}
       <footer className="border-t border-slate-800 mt-12 py-6">
-        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-600">
-          GasPredict Ecuador - Prediccion inteligente de precios de combustibles.
-          Los precios se actualizan el dia 11 de cada mes. Este sistema es solo informativo
-          y no constituye asesoramiento financiero.
+        <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-600 space-y-1">
+          <p>
+            GasPredict Ecuador - Prediccion inteligente de precios de combustibles.
+            Los precios se actualizan el dia 11 de cada mes.
+          </p>
+          <p>Este sistema es solo informativo y no constituye asesoramiento financiero.</p>
+          <p className="text-slate-700 pt-1">
+            v{appVersion} &mdash; Decreto Ejecutivo No. 308 &mdash; Modelos: SARIMA + XGBoost + LSTM
+          </p>
         </div>
       </footer>
     </div>

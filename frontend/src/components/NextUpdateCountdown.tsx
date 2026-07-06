@@ -42,25 +42,28 @@ interface QuickForecast {
 }
 
 const CACHE_KEY = 'gaspredict_forecast_cache';
+// Cache valido por 2 horas (el WTI puede cambiar en el dia por eventos de mercado)
+const CACHE_TTL_MS = 2 * 60 * 60 * 1000;
 
 function loadCachedForecast(): QuickForecast[] | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
     if (!raw) return null;
-    const { date, data } = JSON.parse(raw);
-    // Cache válido solo si es del mismo día
-    if (date === new Date().toISOString().split('T')[0]) return data;
+    const { ts, data } = JSON.parse(raw);
+    if (Date.now() - ts < CACHE_TTL_MS) return data;
+    localStorage.removeItem(CACHE_KEY);
   } catch { /* ignore */ }
   return null;
 }
 
 function saveForecastCache(data: QuickForecast[]) {
   try {
-    localStorage.setItem(CACHE_KEY, JSON.stringify({
-      date: new Date().toISOString().split('T')[0],
-      data,
-    }));
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), data }));
   } catch { /* ignore */ }
+}
+
+function clearForecastCache() {
+  try { localStorage.removeItem(CACHE_KEY); } catch { /* ignore */ }
 }
 
 async function fetchQuickForecast(): Promise<QuickForecast[]> {
@@ -169,8 +172,10 @@ export default function NextUpdateCountdown() {
   }, []);
 
   function handleRefresh() {
+    clearForecastCache();
     setRefreshing(true);
     setLoadingForecast(true);
+    setForecast([]);
     fetchQuickForecast()
       .then((data) => { setForecast(data); saveForecastCache(data); })
       .catch(() => {})

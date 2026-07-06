@@ -1,5 +1,16 @@
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
+export async function fetchAppInfo(): Promise<{ version: string; app: string }> {
+  try {
+    const res = await fetch(`${API_BASE}/`);
+    if (!res.ok) return { version: '1.1.0', app: 'GasPredict Ecuador' };
+    const data = await res.json();
+    return { version: data.version || '1.1.0', app: data.app || 'GasPredict Ecuador' };
+  } catch {
+    return { version: '1.1.0', app: 'GasPredict Ecuador' };
+  }
+}
+
 export async function fetchCurrentPrices(): Promise<FuelPrice[]> {
   const res = await fetch(`${API_BASE}/api/prices/current`);
   if (!res.ok) throw new Error('Error al obtener precios actuales');
