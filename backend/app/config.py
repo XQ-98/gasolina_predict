@@ -92,7 +92,8 @@ class Settings(BaseModel):
     # Parametros del sistema de bandas (Decreto 308)
     BAND_CEILING: float = 0.05    # +5% maximo mensual
     BAND_FLOOR: float = -0.10     # -10% maximo mensual
-    PRICE_UPDATE_DAY: int = 11    # Dia del mes en que se actualizan precios
+    PRICE_UPDATE_DAY: int = 11    # Dia en que EP Petroecuador publica los precios (noche del 11)
+    PRICE_EFFECTIVE_DAY: int = 12  # Dia en que el nuevo precio entra en vigencia
 
     # Datos
     DEFAULT_HISTORY_YEARS: int = 6          # Desde 2020

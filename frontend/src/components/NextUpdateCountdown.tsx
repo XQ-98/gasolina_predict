@@ -131,17 +131,18 @@ async function fetchQuickForecast(): Promise<QuickForecast[]> {
 }
 
 function getNextUpdateDate(now: Date): Date {
-  const currentMonth11 = setDate(startOfDay(now), 11);
+  // Dia 12: nuevo precio entra en vigencia (EP Petroecuador publica la noche del 11)
+  const currentMonth12 = setDate(startOfDay(now), 12);
 
-  if (isSameDay(now, currentMonth11)) {
-    return currentMonth11;
+  if (isSameDay(now, currentMonth12)) {
+    return currentMonth12;
   }
 
-  if (isAfter(now, currentMonth11)) {
-    return setDate(startOfDay(addMonths(now, 1)), 11);
+  if (isAfter(now, currentMonth12)) {
+    return setDate(startOfDay(addMonths(now, 1)), 12);
   }
 
-  return currentMonth11;
+  return currentMonth12;
 }
 
 export default function NextUpdateCountdown() {
@@ -197,12 +198,12 @@ export default function NextUpdateCountdown() {
   const isToday = isSameDay(now, nextUpdate);
 
   const totalDaysInRange = (() => {
-    const prevMonth11 = setDate(startOfDay(addMonths(now, -1)), 11);
-    const currentMonth11 = setDate(startOfDay(now), 11);
-    if (isAfter(now, currentMonth11) || isSameDay(now, currentMonth11)) {
-      return differenceInDays(setDate(startOfDay(addMonths(now, 1)), 11), currentMonth11);
+    const prevMonth12 = setDate(startOfDay(addMonths(now, -1)), 12);
+    const currentMonth12 = setDate(startOfDay(now), 12);
+    if (isAfter(now, currentMonth12) || isSameDay(now, currentMonth12)) {
+      return differenceInDays(setDate(startOfDay(addMonths(now, 1)), 12), currentMonth12);
     }
-    return differenceInDays(currentMonth11, prevMonth11);
+    return differenceInDays(currentMonth12, prevMonth12);
   })();
 
   const daysRemaining = differenceInDays(nextUpdate, startOfDay(now));
@@ -235,7 +236,7 @@ export default function NextUpdateCountdown() {
           </div>
         </div>
         <p className="text-sm text-gasolina-400 mt-3">
-          Los nuevos precios de combustibles entran en vigencia hoy, dia 11.
+          EP Petroecuador publico los precios anoche (dia 11). Los nuevos precios rigen desde hoy, dia 12.
         </p>
 
         {/* Prediccion del dia */}
@@ -427,7 +428,7 @@ export default function NextUpdateCountdown() {
             </h3>
             <p className="text-xs text-slate-500">
               <CalendarDays className="w-3 h-3 inline mr-1" />
-              {format(nextUpdate, "EEEE d 'de' MMMM, yyyy", { locale: es })}
+              Publica: dia 11 &bull; Rige desde: {format(nextUpdate, "d 'de' MMMM, yyyy", { locale: es })}
             </p>
           </div>
         </div>
@@ -470,7 +471,7 @@ export default function NextUpdateCountdown() {
       <div className="mt-4 pt-4 border-t border-slate-700/50">
         <div className="flex items-center justify-between mb-3">
           <h4 className="text-xs text-slate-500 uppercase tracking-wider font-medium">
-            Estimacion para el {format(nextUpdate, "d 'de' MMMM", { locale: es })}
+            Estimacion vigente desde el {format(nextUpdate, "d 'de' MMMM", { locale: es })}
           </h4>
           <button
             onClick={handleRefresh}

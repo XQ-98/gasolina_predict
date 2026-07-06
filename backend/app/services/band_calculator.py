@@ -265,25 +265,32 @@ class BandCalculator:
 
     @staticmethod
     def get_next_update_date() -> dict:
-        """Retorna la fecha del proximo dia 11 y los dias restantes."""
+        """Retorna fechas de publicacion (dia 11) y vigencia (dia 12) del proximo ajuste."""
         today = date.today()
-        day_11 = settings.PRICE_UPDATE_DAY
-        current_month_11 = date(today.year, today.month, day_11)
+        publish_day = settings.PRICE_UPDATE_DAY      # 11: EP Petroecuador publica
+        effective_day = settings.PRICE_EFFECTIVE_DAY  # 12: nuevo precio entra en vigencia
 
-        if today <= current_month_11:
-            next_update = current_month_11
+        current_month_12 = date(today.year, today.month, effective_day)
+
+        if today <= current_month_12:
+            next_effective = current_month_12
         else:
             if today.month == 12:
-                next_update = date(today.year + 1, 1, day_11)
+                next_effective = date(today.year + 1, 1, effective_day)
             else:
-                next_update = date(today.year, today.month + 1, day_11)
+                next_effective = date(today.year, today.month + 1, effective_day)
 
-        days_remaining = (next_update - today).days
+        # Dia 11 es siempre el dia anterior al dia 12 de vigencia
+        next_publish = next_effective.replace(day=publish_day)
+
+        days_remaining = (next_effective - today).days
 
         return {
-            "next_update_date": next_update.isoformat(),
+            "next_update_date": next_effective.isoformat(),      # dia 12: vigencia
+            "next_publish_date": next_publish.isoformat(),       # dia 11: publicacion
             "days_remaining": days_remaining,
             "is_update_day": days_remaining == 0,
+            "is_publish_day": (next_publish - today).days == 0,
         }
 
     @staticmethod

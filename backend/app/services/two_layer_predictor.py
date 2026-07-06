@@ -173,15 +173,16 @@ class TwoLayerPredictor:
         fuel_lower = self._wti_to_fuel_price(wti_lower, current_price, fuel_type)
         fuel_upper = self._wti_to_fuel_price(wti_upper, current_price, fuel_type)
 
-        # Fecha del proximo dia 11
+        # Fecha del proximo dia 12 (vigencia del nuevo precio)
         today = date.today()
-        if today.day <= settings.PRICE_UPDATE_DAY:
-            next_date = date(today.year, today.month, settings.PRICE_UPDATE_DAY)
+        effective_day = settings.PRICE_EFFECTIVE_DAY  # 12
+        if today.day <= effective_day:
+            next_date = date(today.year, today.month, effective_day)
         else:
             if today.month == 12:
-                next_date = date(today.year + 1, 1, settings.PRICE_UPDATE_DAY)
+                next_date = date(today.year + 1, 1, effective_day)
             else:
-                next_date = date(today.year, today.month + 1, settings.PRICE_UPDATE_DAY)
+                next_date = date(today.year, today.month + 1, effective_day)
 
         return {
             "fuel_type": fuel_type,
@@ -396,25 +397,24 @@ class TwoLayerPredictor:
         return 0.0
 
     def _generate_future_dates(self, months: int) -> list[date]:
-        """Genera las fechas futuras (dia 11 de cada mes siguiente).
+        """Genera las fechas futuras (dia 12 de cada mes: vigencia del nuevo precio).
 
         Args:
             months: Numero de meses futuros.
 
         Returns:
-            Lista de objetos date correspondientes al dia 11 de cada mes futuro.
+            Lista de objetos date correspondientes al dia 12 de cada mes futuro.
         """
         today = date.today()
-        update_day = settings.PRICE_UPDATE_DAY
+        effective_day = settings.PRICE_EFFECTIVE_DAY  # 12: dia de vigencia
         dates = []
 
         # Determinar el primer mes futuro
-        if today.day <= update_day:
-            # Aun no ha pasado el dia 11 de este mes
+        if today.day <= effective_day:
             start_year = today.year
             start_month = today.month
         else:
-            # Ya paso el dia 11, empezar desde el proximo mes
+            # Ya paso el dia 12, empezar desde el proximo mes
             if today.month == 12:
                 start_year = today.year + 1
                 start_month = 1
@@ -426,7 +426,7 @@ class TwoLayerPredictor:
         month = start_month
 
         for _ in range(months):
-            dates.append(date(year, month, update_day))
+            dates.append(date(year, month, effective_day))
             if month == 12:
                 year += 1
                 month = 1

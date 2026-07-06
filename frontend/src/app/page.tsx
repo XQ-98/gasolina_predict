@@ -332,7 +332,7 @@ export default function Home() {
                   <h3 className="text-sm font-semibold text-white">Actualizar Precios</h3>
                   <p className="text-xs text-slate-500 mt-0.5">
                     Obtiene los precios oficiales desde EP Petroecuador automaticamente.
-                    Los precios se publican el dia 11 de cada mes.
+                    Se publican la noche del dia 11 y rigen desde el dia 12 de cada mes.
                   </p>
                 </div>
                 <button
@@ -735,7 +735,7 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 text-center text-xs text-slate-600 space-y-1">
           <p>
             GasPredict Ecuador - Prediccion inteligente de precios de combustibles.
-            Los precios se actualizan el dia 11 de cada mes.
+            EP Petroecuador publica los precios la noche del dia 11 y rigen desde el dia 12 de cada mes.
           </p>
           <p>Este sistema es solo informativo y no constituye asesoramiento financiero.</p>
           <p className="text-slate-700 pt-1">
