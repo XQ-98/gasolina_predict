@@ -2,9 +2,10 @@
 
 **Prediccion Inteligente de Precios de Combustibles en Ecuador**
 
-Sistema de prediccion que utiliza Machine Learning y la formula oficial del gobierno ecuatoriano (Decreto Ejecutivo No. 308) para estimar los precios de gasolina y diesel que se publican el dia 11 de cada mes.
+Sistema de prediccion que utiliza Machine Learning y la formula oficial del gobierno ecuatoriano (Decreto Ejecutivo No. 308) para estimar los precios de gasolina y diesel. EP Petroecuador publica los nuevos precios la noche del **dia 11** de cada mes y entran en **vigencia desde el dia 12**.
 
-![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python)
+![Version](https://img.shields.io/badge/version-1.1.0-brightgreen)
+![Python](https://img.shields.io/badge/Python-3.11+-blue?logo=python)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.115-009688?logo=fastapi)
 ![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)
 ![TensorFlow](https://img.shields.io/badge/TensorFlow-2.18-orange?logo=tensorflow)
@@ -16,7 +17,7 @@ Sistema de prediccion que utiliza Machine Learning y la formula oficial del gobi
 
 ## Que hace este proyecto
 
-En Ecuador, los precios de los combustibles (Extra, EcoPais, Diesel) se actualizan el **dia 11 de cada mes** mediante un sistema de bandas de precios regulado por el gobierno. Este sistema:
+En Ecuador, los precios de los combustibles (Extra, EcoPais, Diesel) se actualizan mensualmente mediante un sistema de bandas de precios regulado por el gobierno. Este sistema:
 
 - Calcula un precio teorico basado en el costo de importacion del petroleo (WTI)
 - Limita la subida a un maximo de **+5% mensual** (techo)
@@ -26,9 +27,11 @@ En Ecuador, los precios de los combustibles (Extra, EcoPais, Diesel) se actualiz
 **GasPredict Ecuador** predice estos precios usando un enfoque de **2 capas**:
 
 ### Capa 1: Prediccion del WTI con datos diarios
-- Entrena 3 modelos ML (SARIMA, XGBoost, LSTM) con **miles de datos diarios** del precio del petroleo WTI
+- Entrena 3 modelos ML (SARIMA, XGBoost, LSTM) con datos diarios del precio del petroleo WTI
 - Predice el WTI promedio para los dias 1-10 del proximo mes
+- Si el WTI predicho diverge mas del 5% del precio actual, aplica un **blend 80/20** (80% precio actual + 20% modelo) para anclar la prediccion a la realidad
 - Calcula un ensemble ponderado segun el desempeno de cada modelo
+- Fallback automatico: si Yahoo Finance no esta disponible (Docker), usa los datos diarios de la BD local
 
 ### Capa 2: Formula del Gobierno + Banda de precios
 - Toma el WTI predicho y aplica la **formula exacta del Decreto 308**:
@@ -39,20 +42,28 @@ En Ecuador, los precios de los combustibles (Extra, EcoPais, Diesel) se actualiz
   - IVA (15%)
   - Margen de comercializacion
 - Aplica la **banda de precios**: techo +5% / piso -10% sobre el precio del mes anterior
-- Resultado: precio estimado para el proximo dia 11
+- Resultado: precio estimado vigente desde el proximo dia 12
 
-Este enfoque es mas preciso que predecir el precio del combustible directamente, porque separa la parte incierta (precio del petroleo) de la parte determinista (formula del gobierno).
+---
+
+## Ciclo mensual de precios
+
+| Dia | Evento |
+|-----|--------|
+| 1-10 | EP Petroecuador calcula costos de importacion basados en el WTI del periodo |
+| 11 (noche) | EP Petroecuador **publica** los nuevos precios |
+| 12 | Los nuevos precios **entran en vigencia** en todas las gasolineras |
 
 ---
 
 ## Combustibles cubiertos
 
-| Combustible | Octanaje | Sistema de bandas | Precio actual (Mar 2026) |
+| Combustible | Octanaje | Sistema de bandas | Precio vigente (Jun 2026) |
 |------------|----------|-------------------|--------------------------|
-| Extra | RON 87 | Si (+5% / -10%) | $2.89/galon |
-| EcoPais | RON 87 + etanol | Si (+5% / -10%) | $2.89/galon |
-| Super 95 | RON 95 | No (precio libre) | $3.41/galon |
-| Diesel Premium | - | Si (+5% / -10%) | $2.828/galon |
+| Extra | RON 87 | Si (+5% / -10%) | $3.312/galon |
+| EcoPais | RON 87 + etanol | Si (+5% / -10%) | $3.312/galon |
+| Super 95 | RON 95 | No (precio libre) | $5.700/galon |
+| Diesel Premium | - | Si (+5% / -10%) | $3.251/galon |
 
 ---
 
@@ -65,9 +76,9 @@ Este enfoque es mas preciso que predecir el precio del combustible directamente,
                               |
                     BACKEND (FastAPI + Python)
                          |         |
-                    PostgreSQL   Yahoo Finance
-                    (Docker)     (WTI en vivo)
-                         |
+                    PostgreSQL   Scraper de noticias
+                    (Docker)     (El Universo, Expreso,
+                         |        El Comercio, Primicias)
           +-------------------+-------------------+
           |                                       |
     CAPA 1: WTI                          CAPA 2: FORMULA
@@ -78,8 +89,8 @@ Este enfoque es mas preciso que predecir el precio del combustible directamente,
 SARIMA  XGBoost  LSTM               Formula              Banda
 (diario) (diario) (diario)         del gobierno        +5% / -10%
   |       |       |                    |                     |
-  +---Ensemble----+                    +-----Precio Final----+
-      ponderado                              dia 11
+  +---Ensemble----+    Blend 80/20     +-----Precio Final----+
+      ponderado   <--  si diverge >5%        vigente dia 12
 ```
 
 ---
@@ -87,8 +98,8 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 ## Funcionalidades
 
 ### Dashboard
-- **Cuenta regresiva** al proximo dia 11 con barra de progreso
-- **Mini prediccion** para Extra, EcoPais y Diesel con probabilidad de subida/bajada
+- **Cuenta regresiva** al proximo dia 12 (vigencia) con nota del dia 11 (publicacion)
+- **Mini prediccion** para Extra, EcoPais, Super 95 y Diesel con probabilidad de subida/bajada
 - **Panel expandible**: al hacer clic en un combustible muestra:
   - Explicacion en lenguaje natural de por que sube o baja
   - Paso 1: Prediccion del WTI (actual, predicho, IC 95%, pesos de modelos)
@@ -96,9 +107,11 @@ SARIMA  XGBoost  LSTM               Formula              Banda
   - Paso 3: Aplicacion de la banda con visualizacion grafica
 - **Precios actuales** de los 4 combustibles con cambio vs mes anterior
 - **Tracker del WTI** en tiempo real con sparkline y cambios 24h/7d/30d
+- **Boton "Obtener Precios"**: scraping automatico de noticias de combustibles
 - **Grafico historico** de todos los combustibles desde julio 2020
 - **Noticias** de combustibles Ecuador con analisis de sentimiento
 - **Tooltips educativos** en siglas tecnicas (WTI, CIF, IC, SARIMA, etc.)
+- **Badge de version** visible en el header (v1.1.0)
 
 ### Prediccion avanzada
 - Selector de combustible y horizonte (1-12 meses)
@@ -117,16 +130,16 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 - Indicador visual de si se topa con el techo o el piso
 
 ### Historial de bandas
-- Tabla con todos los cambios del dia 11 desde julio 2020 (69 meses)
+- Tabla con todos los cambios desde julio 2020
 - Conteo de subidas vs bajadas
 - Grafico de barras con cambios mensuales
 - Filtro por tipo de combustible
 
 ### Base de datos (PostgreSQL)
-- **Persistencia completa** de todos los datos en PostgreSQL 16 (Docker)
+- **Persistencia completa** en PostgreSQL 16 (Docker)
 - **5 tablas**: precios historicos, WTI diario, predicciones, noticias, predicciones WTI
-- **Seed automatico**: al iniciar, carga 69 meses de datos reales (276 registros)
-- **Cache inteligente**: noticias se cachean por 24h, WTI diario se acumula
+- **1,413 registros WTI diarios** (2021-2026) incluyendo datos historicos sinteticos calibrados con promedios reales EIA
+- **Cache inteligente**: predicciones se cachean 2 horas en localStorage (no por dia)
 - **Historial de predicciones**: cada prediccion se guarda con su precision calculable
 - **Graceful fallback**: si PostgreSQL no esta disponible, el sistema funciona sin BD
 
@@ -143,14 +156,16 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 | **SARIMA** (statsmodels) | Modelo de series temporales |
 | **XGBoost** | Gradient boosting con features tecnicas |
 | **TensorFlow/Keras** | LSTM para secuencias temporales |
-| **yfinance** | Datos del WTI desde Yahoo Finance |
+| **yfinance** | Datos del WTI desde Yahoo Finance (con fallback a BD) |
+| **APScheduler** | Obtencion automatica de precios el dia 12 a las 8am Ecuador |
+| **BeautifulSoup** | Scraping de noticias de combustibles |
 | **NLTK** | Analisis de sentimiento de noticias |
 | **Pandas/NumPy** | Procesamiento de datos |
 
 ### Frontend
 | Tecnologia | Uso |
 |-----------|-----|
-| **Next.js 14** | Framework React con SSR |
+| **Next.js 14** | Framework React con SSR (output: standalone para Docker) |
 | **TypeScript** | Tipado estatico |
 | **Tailwind CSS** | Estilos utilitarios |
 | **Plotly.js** | Graficos interactivos |
@@ -160,8 +175,10 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 ### Infraestructura
 | Tecnologia | Uso |
 |-----------|-----|
-| **Docker Compose** | Orquestacion de contenedores |
-| **PostgreSQL 16** | Base de datos en contenedor (puerto 5436) |
+| **Docker Compose** | Orquestacion de 3 contenedores |
+| **PostgreSQL 16** | Base de datos (puerto 5436) |
+| **Python 3.11 slim** | Contenedor backend (puerto 8001) |
+| **Node 20 slim** | Contenedor frontend standalone (puerto 3001) |
 
 ---
 
@@ -171,14 +188,16 @@ SARIMA  XGBoost  LSTM               Formula              Banda
 Prediccion_Gas/
 ├── README.md
 ├── .gitignore
-├── docker-compose.yml                      # PostgreSQL 16 en Docker
+├── docker-compose.yml                      # 3 servicios: postgres + backend + frontend
+├── backups/                                # Respaldos de la BD (.dump y .sql)
 ├── backend/
+│   ├── Dockerfile                          # Multi-etapa: pip split para evitar OOM
 │   ├── requirements.txt
 │   └── app/
-│       ├── main.py                         # FastAPI entry point
-│       ├── config.py                       # Configuracion (tickers, bandas, formula, BD)
+│       ├── main.py                         # FastAPI + APScheduler (dia 12, 8am Ecuador)
+│       ├── config.py                       # PRICE_UPDATE_DAY=11, PRICE_EFFECTIVE_DAY=12
 │       ├── api/
-│       │   ├── routes.py                   # 9 endpoints REST
+│       │   ├── routes.py                   # Endpoints REST + /api/prices/fetch
 │       │   └── schemas.py                  # Modelos Pydantic
 │       ├── database/
 │       │   ├── connection.py               # Engine SQLAlchemy + SessionLocal
@@ -191,9 +210,10 @@ Prediccion_Gas/
 │       │   ├── xgboost_model.py            # XGBoost mensual
 │       │   └── lstm_model.py               # LSTM mensual
 │       ├── services/
-│       │   ├── wti_predictor.py            # Prediccion WTI diaria (Capa 1)
-│       │   ├── two_layer_predictor.py      # Orquestador 2 capas
-│       │   ├── band_calculator.py          # Formula Decreto 308 + bandas
+│       │   ├── wti_predictor.py            # Prediccion WTI diaria (Capa 1) + fallback BD
+│       │   ├── two_layer_predictor.py      # Orquestador 2 capas + blend 80/20
+│       │   ├── band_calculator.py          # Formula Decreto 308 + bandas + dia 12
+│       │   ├── price_scraper.py            # Scraping de noticias (4 fuentes)
 │       │   ├── data_pipeline.py            # Datos historicos + Yahoo Finance
 │       │   ├── feature_engineering.py      # Features tecnicas
 │       │   ├── explainability.py           # Analisis de factores
@@ -201,29 +221,31 @@ Prediccion_Gas/
 │       │   └── demo_data.py                # Datos de respaldo (fallback sin BD)
 │       └── data/
 └── frontend/
+    ├── Dockerfile                          # Multi-etapa: builder + runner standalone
+    ├── next.config.js                      # output: standalone
     ├── package.json
     ├── tailwind.config.js
     └── src/
         ├── app/
         │   ├── layout.tsx
-        │   ├── page.tsx                    # Dashboard principal (4 pestanas)
+        │   ├── page.tsx                    # Dashboard principal + badge version
         │   └── globals.css
         ├── components/
-        │   ├── NextUpdateCountdown.tsx     # Cuenta regresiva + mini prediccion
-        │   ├── FuelPriceCards.tsx           # Tarjetas de precios actuales
-        │   ├── WtiTracker.tsx              # Seguimiento del WTI
-        │   ├── HistoricalChart.tsx          # Grafico historico
-        │   ├── PredictionChart.tsx          # Grafico de prediccion
-        │   ├── PredictionSummary.tsx        # Resumen + detalle 2 capas
-        │   ├── BandSimulator.tsx            # Simulador de bandas
-        │   ├── BandHistory.tsx              # Historial dia 11
-        │   ├── AnalysisPanel.tsx            # Analisis de factores
-        │   ├── ModelComparison.tsx          # Comparacion de modelos
-        │   ├── ModelMetrics.tsx             # Metricas
-        │   ├── NewsPanel.tsx                # Noticias
-        │   └── Sigla.tsx                    # Tooltips educativos
+        │   ├── NextUpdateCountdown.tsx     # Cuenta regresiva al dia 12 + mini prediccion
+        │   ├── FuelPriceCards.tsx          # Tarjetas de precios actuales
+        │   ├── WtiTracker.tsx             # Seguimiento del WTI
+        │   ├── HistoricalChart.tsx         # Grafico historico
+        │   ├── PredictionChart.tsx         # Grafico de prediccion
+        │   ├── PredictionSummary.tsx       # Resumen + detalle 2 capas
+        │   ├── BandSimulator.tsx           # Simulador de bandas
+        │   ├── BandHistory.tsx             # Historial ajustes
+        │   ├── AnalysisPanel.tsx           # Analisis de factores
+        │   ├── ModelComparison.tsx         # Comparacion de modelos
+        │   ├── ModelMetrics.tsx            # Metricas
+        │   ├── NewsPanel.tsx               # Noticias
+        │   └── Sigla.tsx                   # Tooltips educativos
         └── lib/
-            ├── api.ts                      # Cliente API con normalizacion
+            ├── api.ts                      # Cliente API + fetchAppInfo()
             └── types.d.ts                  # Tipos TypeScript
 ```
 
@@ -233,52 +255,28 @@ Prediccion_Gas/
 
 ### Esquema (PostgreSQL 16)
 
-| Tabla | Descripcion | Registros iniciales |
-|-------|-------------|---------------------|
-| `fuel_prices` | Precios historicos mensuales (dia 11) por combustible | 276 (69 meses x 4 combustibles) |
-| `wti_daily` | Precios diarios del WTI (se acumula automaticamente) | Se llena al consultar /api/wti |
-| `predictions` | Historial de predicciones con precision calculable | Se llena al hacer predicciones |
+| Tabla | Descripcion | Registros |
+|-------|-------------|-----------|
+| `fuel_prices` | Precios historicos mensuales (dia 11) por combustible | ~280+ registros (Jul 2020 - presente) |
+| `wti_daily` | Precios diarios del WTI | ~1,413 registros (Ene 2021 - Jun 2026) |
+| `predictions` | Historial de predicciones con precision calculable | Crece con cada prediccion |
 | `news_cache` | Cache de noticias con sentimiento (expira en 24h) | Se llena al consultar /api/news |
 | `wti_predictions` | Predicciones del WTI (Capa 1) | Se llena con predicciones two_layer |
 
-### Diagrama de relaciones
+### Respaldo de la base de datos
 
+Los respaldos se guardan en la carpeta `backups/`:
+
+```bash
+# Crear respaldo (formato comprimido)
+docker exec gaspredict-postgres pg_dump -U gaspredict -d gaspredict -F c \
+  -f /var/lib/postgresql/data/backup.dump
+docker cp gaspredict-postgres:/var/lib/postgresql/data/backup.dump backups/
+
+# Restaurar desde respaldo
+docker exec -i gaspredict-postgres pg_restore -U gaspredict -d gaspredict \
+  backups/gaspredict_backup_YYYYMMDD_HHMMSS.dump
 ```
-fuel_prices (276 registros seed)
-├── date + fuel_type (UNIQUE)
-├── price, previous_price, change_percent
-└── band_status (TECHO | PISO | DENTRO | LIBRE)
-
-wti_daily (se acumula)
-├── date (UNIQUE)
-└── close_price, open, high, low, volume
-
-predictions (historial)
-├── fuel_type, approach, target_date
-├── predicted_price, actual_price (se llena despues)
-├── wti_predicted, wti_actual
-├── accuracy_pct (calculable)
-└── model_weights (JSON), confidence bounds
-
-news_cache (cache 24h)
-├── url (UNIQUE)
-├── title, source, sentiment, score
-└── fetched_at (para control de expiracion)
-
-wti_predictions (Capa 1)
-├── target_month
-├── predicted_avg, actual_avg
-├── sarima/xgboost/lstm predictions
-└── weights (JSON), accuracy_pct
-```
-
-### Modo sin base de datos
-
-Si PostgreSQL no esta disponible (contenedor detenido, sin Docker), el sistema **sigue funcionando** automaticamente:
-- Los precios historicos se leen de `data_pipeline.py` (datos hardcodeados)
-- El WTI se descarga directo de Yahoo Finance
-- Las predicciones se calculan pero no se persisten
-- Las noticias se obtienen en cada request sin cache
 
 ---
 
@@ -286,165 +284,109 @@ Si PostgreSQL no esta disponible (contenedor detenido, sin Docker), el sistema *
 
 | Metodo | Endpoint | Descripcion |
 |--------|----------|-------------|
+| GET | `/` | Info de la app + version actual |
 | GET | `/api/prices/current` | Precios vigentes de los 4 combustibles |
-| GET | `/api/prices/historical` | Historico mensual (dia 11) desde 2020 |
+| GET | `/api/prices/historical` | Historico mensual desde 2020 |
+| GET | `/api/prices/fetch` | Scraping automatico de precios desde noticias |
+| POST | `/api/prices/register` | Registrar precios manualmente |
 | GET | `/api/wti` | Precio WTI actual + historico diario |
 | POST | `/api/predict` | Prediccion (two_layer o ensemble) |
 | POST | `/api/band/simulate` | Simular sistema de bandas con WTI dado |
-| GET | `/api/band/history` | Historial de cambios del dia 11 |
+| GET | `/api/band/history` | Historial de cambios |
 | GET | `/api/analysis` | Analisis de factores que afectan el precio |
 | GET | `/api/news` | Noticias de combustibles + sentimiento |
-| GET | `/api/predictions/history` | Historial de predicciones pasadas y su precision |
+| GET | `/api/predictions/history` | Historial de predicciones y su precision |
 
 ### Ejemplo de prediccion
 
 ```bash
-curl -X POST http://localhost:8000/api/predict \
+curl -X POST http://localhost:8001/api/predict \
   -H "Content-Type: application/json" \
   -d '{"fuel_type": "extra", "months": 3, "approach": "two_layer"}'
 ```
 
 Respuesta incluye:
-- `layer_1_wti`: WTI predicho, IC 95%, modelos individuales, pesos, metricas
+- `layer_1_wti`: WTI predicho, IC 95%, modelos individuales, pesos, metricas, blend aplicado
 - `layer_2_formula`: Desglose de la formula (CIF, transporte, margenes, IVA)
 - `predictions`: Precio final con banda aplicada por mes
 - `confidence_interval`: Limites inferior y superior
 
-### Ejemplo de historial de predicciones
-
-```bash
-curl http://localhost:8000/api/predictions/history?fuel_type=extra&limit=10
-```
-
-Retorna predicciones pasadas con `predicted_price`, `actual_price` (si ya paso el dia 11) y `accuracy_pct`.
-
 ---
 
-## Instalacion y ejecucion
+## Instalacion con Docker (recomendado)
 
 ### Requisitos previos
-- **Python** 3.10+
-- **Node.js** 18+
-- **Docker** y **Docker Compose** (para PostgreSQL)
+- **Docker Desktop** con Docker Compose
 
-### Paso 1: Clonar el repositorio
+### Levantar los 3 servicios
 
 ```bash
-git clone https://github.com/xavierquiroz1998/gasolina_predict.git
+git clone https://github.com/XQ-98/gasolina_predict.git
 cd gasolina_predict
-```
-
-### Paso 2: Levantar PostgreSQL con Docker
-
-```bash
 docker compose up -d
 ```
 
-Esto crea un contenedor `gaspredict_db` con:
-- **Puerto**: 5436 (host) -> 5432 (contenedor)
-- **Base de datos**: gaspredict
-- **Usuario**: gaspredict
-- **Password**: gaspredict2026
-- **Volumen persistente**: los datos sobreviven reinicios del contenedor
-
-Verificar que esta listo:
-```bash
-docker exec gaspredict_db pg_isready -U gaspredict -d gaspredict
-# Debe mostrar: accepting connections
-```
-
-### Paso 3: Instalar y ejecutar el backend
-
-```bash
-cd backend
-pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
-```
-
-Al iniciar, el backend automaticamente:
-1. Crea las 5 tablas en PostgreSQL
-2. Carga los 276 registros de precios historicos (seed)
-3. Descarga recursos NLTK para analisis de sentimiento
-
-Verificar:
-```bash
-# API funcionando
-curl http://localhost:8000/
-
-# Documentacion interactiva
-# Abrir http://localhost:8000/docs
-
-# Verificar datos en BD
-docker exec gaspredict_db psql -U gaspredict -d gaspredict \
-  -c "SELECT count(*) FROM fuel_prices;"
-# Debe mostrar: 276
-```
-
-### Paso 4: Instalar y ejecutar el frontend
-
-```bash
-cd frontend
-npm install
-npm run build
-npm run start -- -p 3001
-```
-
-Abrir **http://localhost:3001** en el navegador.
-
-### Resumen de servicios
+Esto levanta automaticamente:
 
 | Servicio | URL | Puerto |
 |----------|-----|--------|
 | Frontend (Next.js) | http://localhost:3001 | 3001 |
-| Backend (FastAPI) | http://localhost:8000 | 8000 |
-| API Docs (Swagger) | http://localhost:8000/docs | 8000 |
+| Backend (FastAPI) | http://localhost:8001 | 8001 |
+| API Docs (Swagger) | http://localhost:8001/docs | 8001 |
 | PostgreSQL | localhost:5436 | 5436 |
+
+Al iniciar, el backend automaticamente:
+1. Crea las 5 tablas en PostgreSQL
+2. Carga los datos historicos de precios (seed)
+3. Descarga recursos NLTK para analisis de sentimiento
+4. Programa la obtencion automatica de precios para el dia 12 a las 8am (hora Ecuador)
 
 ### Detener servicios
 
 ```bash
-# Detener frontend y backend: Ctrl+C en sus terminales
-
-# Detener PostgreSQL (datos se conservan)
+# Detener (datos se conservan)
 docker compose stop
 
-# Eliminar contenedor y volumen (BORRA datos)
+# Eliminar contenedores y volumenes (BORRA datos)
 docker compose down -v
 ```
 
 ---
 
-## Ejecucion sin Docker (modo sin BD)
+## Instalacion sin Docker
 
-Si no tienes Docker instalado, el sistema funciona igualmente:
+### Requisitos
+- **Python** 3.11+
+- **Node.js** 20+
+- **PostgreSQL** 16 (opcional, funciona sin BD)
 
 ```bash
-# Backend (sin PostgreSQL, usa datos en memoria)
+# Backend
 cd backend
 pip install -r requirements.txt
-python -m uvicorn app.main:app --reload --port 8000
+python -m uvicorn app.main:app --reload --port 8001
 
-# Frontend
+# Frontend (en otra terminal)
 cd frontend
 npm install
 npm run build
 npm run start -- -p 3001
 ```
 
-El backend detecta automaticamente que PostgreSQL no esta disponible y usa los datos historicos hardcodeados en `data_pipeline.py`. Las predicciones funcionan igual, pero no se persisten entre reinicios.
-
 ---
 
 ## Datos historicos incluidos
 
-El sistema incluye **69 meses de datos reales** de precios de combustibles en Ecuador (julio 2020 - marzo 2026), incluyendo:
+El sistema incluye datos reales de precios de combustibles en Ecuador desde **julio 2020** hasta la fecha, incluyendo:
 
 - Precios mensuales de Extra, EcoPais, Super 95 y Diesel
+- **1,413 registros diarios de WTI** (enero 2021 - junio 2026)
 - Hitos clave:
   - Jul 2020: Inicio del sistema de bandas (Decreto 1054)
   - Jun 2024: Eliminacion del subsidio a Extra/EcoPais (Decreto 308)
   - Sep 2025: Eliminacion del subsidio al diesel (Decreto 126)
   - Dic 2025: Diesel entra al sistema de bandas (Decreto 242)
+  - Jun 2026: Acuerdo de paz EE.UU.-Iran, reapertura Estrecho de Ormuz, WTI cae a ~$80
 
 ---
 
@@ -453,14 +395,24 @@ El sistema incluye **69 meses de datos reales** de precios de combustibles en Ec
 Este proyecto implementa la logica del **Decreto Ejecutivo No. 308** (junio 2024) que establece:
 
 1. **Banda asimetrica**: techo +5% / piso -10% mensual
-2. **Calculo el dia 10**: EP Petroecuador calcula basado en costos de importacion
-3. **Vigencia dia 11**: nuevos precios desde las 00:00 del dia 11
-4. **Super 95 excluida**: tiene precio libre de mercado
-5. **Formula de precio**:
+2. **Calculo dias 1-10**: EP Petroecuador calcula basado en costos de importacion del periodo
+3. **Publicacion dia 11** (noche): EP Petroecuador publica los nuevos precios
+4. **Vigencia dia 12**: nuevos precios rigen en todas las gasolineras del pais
+5. **Super 95 excluida**: tiene precio libre de mercado
+6. **Formula de precio**:
    ```
    Precio = Terminal(CIF + transporte + almacenamiento + margen EP
             + costo capital) * (1 + IVA 15%) + margen comercial * (1 + IVA 15%)
    ```
+
+---
+
+## Control de versiones y ramas
+
+| Rama | Proposito | Politica |
+|------|-----------|----------|
+| `main` | Produccion estable | Solo merge via PR con aprobacion del propietario |
+| `develop` | Desarrollo activo | Push libre, merge a main requiere PR aprobado |
 
 ---
 
