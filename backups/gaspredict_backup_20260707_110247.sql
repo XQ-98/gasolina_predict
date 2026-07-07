@@ -1,0 +1,2458 @@
+--
+-- PostgreSQL database dump
+--
+
+\restrict bj6I2nfuDD9kaL52QJm3sic0whbdXY7yEAl5Zun0pUVgzCXKR4LsS7usGAZEBYB
+
+-- Dumped from database version 16.14
+-- Dumped by pg_dump version 16.14
+
+SET statement_timeout = 0;
+SET lock_timeout = 0;
+SET idle_in_transaction_session_timeout = 0;
+SET client_encoding = 'UTF8';
+SET standard_conforming_strings = on;
+SELECT pg_catalog.set_config('search_path', '', false);
+SET check_function_bodies = false;
+SET xmloption = content;
+SET client_min_messages = warning;
+SET row_security = off;
+
+SET default_tablespace = '';
+
+SET default_table_access_method = heap;
+
+--
+-- Name: fuel_prices; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.fuel_prices (
+    id integer NOT NULL,
+    date date NOT NULL,
+    fuel_type character varying(20) NOT NULL,
+    price double precision NOT NULL,
+    previous_price double precision,
+    change_percent double precision,
+    band_status character varying(10),
+    created_at timestamp without time zone,
+    updated_at timestamp without time zone
+);
+
+
+--
+-- Name: COLUMN fuel_prices.date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fuel_prices.date IS 'Dia 11 del mes correspondiente';
+
+
+--
+-- Name: COLUMN fuel_prices.fuel_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fuel_prices.fuel_type IS 'extra, ecopais, super_95, diesel';
+
+
+--
+-- Name: COLUMN fuel_prices.price; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fuel_prices.price IS 'Precio en USD/galon';
+
+
+--
+-- Name: COLUMN fuel_prices.previous_price; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fuel_prices.previous_price IS 'Precio del mes anterior';
+
+
+--
+-- Name: COLUMN fuel_prices.change_percent; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fuel_prices.change_percent IS 'Porcentaje de cambio vs mes anterior';
+
+
+--
+-- Name: COLUMN fuel_prices.band_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.fuel_prices.band_status IS 'TECHO, PISO, DENTRO, LIBRE';
+
+
+--
+-- Name: fuel_prices_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.fuel_prices_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: fuel_prices_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.fuel_prices_id_seq OWNED BY public.fuel_prices.id;
+
+
+--
+-- Name: news_cache; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.news_cache (
+    id integer NOT NULL,
+    title character varying(500) NOT NULL,
+    source character varying(200),
+    url character varying(1000) NOT NULL,
+    published_date timestamp without time zone,
+    sentiment character varying(20) NOT NULL,
+    sentiment_score double precision,
+    summary text,
+    fetched_at timestamp without time zone
+);
+
+
+--
+-- Name: COLUMN news_cache.title; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.title IS 'Titulo de la noticia';
+
+
+--
+-- Name: COLUMN news_cache.source; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.source IS 'Fuente de la noticia';
+
+
+--
+-- Name: COLUMN news_cache.url; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.url IS 'URL unica de la noticia';
+
+
+--
+-- Name: COLUMN news_cache.published_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.published_date IS 'Fecha de publicacion';
+
+
+--
+-- Name: COLUMN news_cache.sentiment; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.sentiment IS 'positivo, negativo, neutro';
+
+
+--
+-- Name: COLUMN news_cache.sentiment_score; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.sentiment_score IS 'Score numerico del sentimiento';
+
+
+--
+-- Name: COLUMN news_cache.summary; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.summary IS 'Resumen o descripcion de la noticia';
+
+
+--
+-- Name: COLUMN news_cache.fetched_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.news_cache.fetched_at IS 'Cuando se obtuvo la noticia';
+
+
+--
+-- Name: news_cache_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.news_cache_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: news_cache_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.news_cache_id_seq OWNED BY public.news_cache.id;
+
+
+--
+-- Name: predictions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.predictions (
+    id integer NOT NULL,
+    created_at timestamp without time zone,
+    fuel_type character varying(20) NOT NULL,
+    approach character varying(20) NOT NULL,
+    target_date date NOT NULL,
+    predicted_price double precision NOT NULL,
+    actual_price double precision,
+    wti_predicted double precision,
+    wti_actual double precision,
+    band_status character varying(10),
+    accuracy_pct double precision,
+    model_weights json,
+    confidence_lower double precision,
+    confidence_upper double precision
+);
+
+
+--
+-- Name: COLUMN predictions.created_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.created_at IS 'Cuando se genero la prediccion';
+
+
+--
+-- Name: COLUMN predictions.fuel_type; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.fuel_type IS 'Tipo de combustible predicho';
+
+
+--
+-- Name: COLUMN predictions.approach; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.approach IS 'two_layer o ensemble';
+
+
+--
+-- Name: COLUMN predictions.target_date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.target_date IS 'Dia 11 objetivo de la prediccion';
+
+
+--
+-- Name: COLUMN predictions.predicted_price; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.predicted_price IS 'Precio predicho USD/galon';
+
+
+--
+-- Name: COLUMN predictions.actual_price; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.actual_price IS 'Precio real (se llena cuando llega el dia 11)';
+
+
+--
+-- Name: COLUMN predictions.wti_predicted; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.wti_predicted IS 'WTI predicho para ese periodo';
+
+
+--
+-- Name: COLUMN predictions.wti_actual; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.wti_actual IS 'WTI real (se llena despues)';
+
+
+--
+-- Name: COLUMN predictions.band_status; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.band_status IS 'Estado de banda aplicado';
+
+
+--
+-- Name: COLUMN predictions.accuracy_pct; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.accuracy_pct IS 'Precision porcentual (se calcula despues)';
+
+
+--
+-- Name: COLUMN predictions.model_weights; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.model_weights IS 'Pesos del ensemble usados';
+
+
+--
+-- Name: COLUMN predictions.confidence_lower; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.confidence_lower IS 'Limite inferior intervalo de confianza';
+
+
+--
+-- Name: COLUMN predictions.confidence_upper; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.predictions.confidence_upper IS 'Limite superior intervalo de confianza';
+
+
+--
+-- Name: predictions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.predictions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: predictions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.predictions_id_seq OWNED BY public.predictions.id;
+
+
+--
+-- Name: wti_daily; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wti_daily (
+    id integer NOT NULL,
+    date date NOT NULL,
+    close_price double precision NOT NULL,
+    open_price double precision,
+    high double precision,
+    low double precision,
+    volume bigint,
+    created_at timestamp without time zone
+);
+
+
+--
+-- Name: COLUMN wti_daily.date; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_daily.date IS 'Fecha del registro';
+
+
+--
+-- Name: COLUMN wti_daily.close_price; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_daily.close_price IS 'Precio de cierre USD/barril';
+
+
+--
+-- Name: COLUMN wti_daily.open_price; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_daily.open_price IS 'Precio de apertura';
+
+
+--
+-- Name: COLUMN wti_daily.high; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_daily.high IS 'Precio maximo del dia';
+
+
+--
+-- Name: COLUMN wti_daily.low; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_daily.low IS 'Precio minimo del dia';
+
+
+--
+-- Name: COLUMN wti_daily.volume; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_daily.volume IS 'Volumen de transacciones';
+
+
+--
+-- Name: wti_daily_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.wti_daily_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: wti_daily_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.wti_daily_id_seq OWNED BY public.wti_daily.id;
+
+
+--
+-- Name: wti_predictions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.wti_predictions (
+    id integer NOT NULL,
+    created_at timestamp without time zone,
+    target_month date NOT NULL,
+    predicted_avg double precision NOT NULL,
+    actual_avg double precision,
+    confidence_lower double precision,
+    confidence_upper double precision,
+    sarima_prediction double precision,
+    xgboost_prediction double precision,
+    lstm_prediction double precision,
+    weights json,
+    accuracy_pct double precision
+);
+
+
+--
+-- Name: COLUMN wti_predictions.created_at; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.created_at IS 'Cuando se genero la prediccion';
+
+
+--
+-- Name: COLUMN wti_predictions.target_month; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.target_month IS 'Primer dia del mes objetivo';
+
+
+--
+-- Name: COLUMN wti_predictions.predicted_avg; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.predicted_avg IS 'Precio promedio predicho USD/barril';
+
+
+--
+-- Name: COLUMN wti_predictions.actual_avg; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.actual_avg IS 'Precio promedio real (se llena despues)';
+
+
+--
+-- Name: COLUMN wti_predictions.confidence_lower; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.confidence_lower IS 'Limite inferior del intervalo';
+
+
+--
+-- Name: COLUMN wti_predictions.confidence_upper; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.confidence_upper IS 'Limite superior del intervalo';
+
+
+--
+-- Name: COLUMN wti_predictions.sarima_prediction; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.sarima_prediction IS 'Prediccion individual SARIMA';
+
+
+--
+-- Name: COLUMN wti_predictions.xgboost_prediction; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.xgboost_prediction IS 'Prediccion individual XGBoost';
+
+
+--
+-- Name: COLUMN wti_predictions.lstm_prediction; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.lstm_prediction IS 'Prediccion individual LSTM';
+
+
+--
+-- Name: COLUMN wti_predictions.weights; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.weights IS 'Pesos del ensemble';
+
+
+--
+-- Name: COLUMN wti_predictions.accuracy_pct; Type: COMMENT; Schema: public; Owner: -
+--
+
+COMMENT ON COLUMN public.wti_predictions.accuracy_pct IS 'Precision porcentual (se calcula despues)';
+
+
+--
+-- Name: wti_predictions_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.wti_predictions_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: wti_predictions_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.wti_predictions_id_seq OWNED BY public.wti_predictions.id;
+
+
+--
+-- Name: fuel_prices id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fuel_prices ALTER COLUMN id SET DEFAULT nextval('public.fuel_prices_id_seq'::regclass);
+
+
+--
+-- Name: news_cache id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_cache ALTER COLUMN id SET DEFAULT nextval('public.news_cache_id_seq'::regclass);
+
+
+--
+-- Name: predictions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.predictions ALTER COLUMN id SET DEFAULT nextval('public.predictions_id_seq'::regclass);
+
+
+--
+-- Name: wti_daily id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wti_daily ALTER COLUMN id SET DEFAULT nextval('public.wti_daily_id_seq'::regclass);
+
+
+--
+-- Name: wti_predictions id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wti_predictions ALTER COLUMN id SET DEFAULT nextval('public.wti_predictions_id_seq'::regclass);
+
+
+--
+-- Data for Name: fuel_prices; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.fuel_prices (id, date, fuel_type, price, previous_price, change_percent, band_status, created_at, updated_at) FROM stdin;
+1	2020-07-11	extra	1.75	\N	\N	\N	2026-05-28 17:11:02.846788	2026-05-28 17:11:02.846789
+2	2020-07-11	ecopais	1.75	\N	\N	\N	2026-05-28 17:11:02.84679	2026-05-28 17:11:02.84679
+3	2020-07-11	super_95	2.4	\N	\N	\N	2026-05-28 17:11:02.84679	2026-05-28 17:11:02.846792
+4	2020-07-11	diesel	1.088	\N	\N	\N	2026-05-28 17:11:02.846793	2026-05-28 17:11:02.846793
+5	2020-08-11	extra	1.75	1.75	0	DENTRO	2026-05-28 17:11:02.849265	2026-05-28 17:11:02.849267
+6	2020-08-11	ecopais	1.75	1.75	0	DENTRO	2026-05-28 17:11:02.849267	2026-05-28 17:11:02.849268
+7	2020-08-11	super_95	2.28	2.4	-5	LIBRE	2026-05-28 17:11:02.849268	2026-05-28 17:11:02.849268
+8	2020-08-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849269	2026-05-28 17:11:02.849269
+9	2020-09-11	extra	1.68	1.75	-4	DENTRO	2026-05-28 17:11:02.849269	2026-05-28 17:11:02.84927
+10	2020-09-11	ecopais	1.68	1.75	-4	DENTRO	2026-05-28 17:11:02.84927	2026-05-28 17:11:02.84927
+11	2020-09-11	super_95	2.15	2.28	-5.7	LIBRE	2026-05-28 17:11:02.849271	2026-05-28 17:11:02.849271
+12	2020-09-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849272	2026-05-28 17:11:02.849272
+13	2020-10-11	extra	1.68	1.68	0	DENTRO	2026-05-28 17:11:02.849272	2026-05-28 17:11:02.849273
+14	2020-10-11	ecopais	1.68	1.68	0	DENTRO	2026-05-28 17:11:02.849273	2026-05-28 17:11:02.849273
+15	2020-10-11	super_95	2.1	2.15	-2.33	LIBRE	2026-05-28 17:11:02.849274	2026-05-28 17:11:02.849274
+16	2020-10-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849275	2026-05-28 17:11:02.849275
+17	2020-11-11	extra	1.68	1.68	0	DENTRO	2026-05-28 17:11:02.849275	2026-05-28 17:11:02.849276
+18	2020-11-11	ecopais	1.68	1.68	0	DENTRO	2026-05-28 17:11:02.849276	2026-05-28 17:11:02.849277
+19	2020-11-11	super_95	2	2.1	-4.76	LIBRE	2026-05-28 17:11:02.849277	2026-05-28 17:11:02.849277
+20	2020-11-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849278	2026-05-28 17:11:02.849278
+21	2020-12-11	extra	1.75	1.68	4.17	DENTRO	2026-05-28 17:11:02.849278	2026-05-28 17:11:02.849279
+22	2020-12-11	ecopais	1.75	1.68	4.17	DENTRO	2026-05-28 17:11:02.849279	2026-05-28 17:11:02.849279
+23	2020-12-11	super_95	2.15	2	7.5	LIBRE	2026-05-28 17:11:02.84928	2026-05-28 17:11:02.84928
+24	2020-12-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.84928	2026-05-28 17:11:02.849281
+25	2021-01-11	extra	1.75	1.75	0	DENTRO	2026-05-28 17:11:02.849281	2026-05-28 17:11:02.849281
+26	2021-01-11	ecopais	1.75	1.75	0	DENTRO	2026-05-28 17:11:02.849282	2026-05-28 17:11:02.849282
+27	2021-01-11	super_95	2.2	2.15	2.33	LIBRE	2026-05-28 17:11:02.849283	2026-05-28 17:11:02.849283
+28	2021-01-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849283	2026-05-28 17:11:02.849284
+29	2021-02-11	extra	1.8	1.75	2.86	DENTRO	2026-05-28 17:11:02.849284	2026-05-28 17:11:02.849284
+30	2021-02-11	ecopais	1.8	1.75	2.86	DENTRO	2026-05-28 17:11:02.849285	2026-05-28 17:11:02.849285
+31	2021-02-11	super_95	2.3	2.2	4.55	LIBRE	2026-05-28 17:11:02.849285	2026-05-28 17:11:02.849286
+32	2021-02-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849286	2026-05-28 17:11:02.849286
+33	2021-03-11	extra	1.85	1.8	2.78	DENTRO	2026-05-28 17:11:02.849287	2026-05-28 17:11:02.849287
+34	2021-03-11	ecopais	1.85	1.8	2.78	DENTRO	2026-05-28 17:11:02.849288	2026-05-28 17:11:02.849288
+35	2021-03-11	super_95	2.45	2.3	6.52	LIBRE	2026-05-28 17:11:02.849288	2026-05-28 17:11:02.849289
+36	2021-03-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849289	2026-05-28 17:11:02.849289
+37	2021-04-11	extra	1.85	1.85	0	DENTRO	2026-05-28 17:11:02.84929	2026-05-28 17:11:02.84929
+38	2021-04-11	ecopais	1.85	1.85	0	DENTRO	2026-05-28 17:11:02.84929	2026-05-28 17:11:02.849291
+39	2021-04-11	super_95	2.4	2.45	-2.04	LIBRE	2026-05-28 17:11:02.849291	2026-05-28 17:11:02.849291
+40	2021-04-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849292	2026-05-28 17:11:02.849292
+41	2021-05-11	extra	1.9	1.85	2.7	DENTRO	2026-05-28 17:11:02.849293	2026-05-28 17:11:02.849293
+42	2021-05-11	ecopais	1.9	1.85	2.7	DENTRO	2026-05-28 17:11:02.849293	2026-05-28 17:11:02.849294
+43	2021-05-11	super_95	2.55	2.4	6.25	LIBRE	2026-05-28 17:11:02.849294	2026-05-28 17:11:02.849294
+44	2021-05-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849295	2026-05-28 17:11:02.849295
+45	2021-06-11	extra	1.95	1.9	2.63	DENTRO	2026-05-28 17:11:02.849296	2026-05-28 17:11:02.849296
+46	2021-06-11	ecopais	1.95	1.9	2.63	DENTRO	2026-05-28 17:11:02.849296	2026-05-28 17:11:02.849297
+47	2021-06-11	super_95	2.7	2.55	5.88	LIBRE	2026-05-28 17:11:02.849297	2026-05-28 17:11:02.849297
+48	2021-06-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849298	2026-05-28 17:11:02.849298
+49	2021-07-11	extra	2	1.95	2.56	DENTRO	2026-05-28 17:11:02.849298	2026-05-28 17:11:02.849299
+50	2021-07-11	ecopais	2	1.95	2.56	DENTRO	2026-05-28 17:11:02.849299	2026-05-28 17:11:02.849299
+51	2021-07-11	super_95	2.8	2.7	3.7	LIBRE	2026-05-28 17:11:02.8493	2026-05-28 17:11:02.8493
+52	2021-07-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.8493	2026-05-28 17:11:02.849301
+53	2021-08-11	extra	2	2	0	DENTRO	2026-05-28 17:11:02.849301	2026-05-28 17:11:02.849301
+54	2021-08-11	ecopais	2	2	0	DENTRO	2026-05-28 17:11:02.849302	2026-05-28 17:11:02.849302
+55	2021-08-11	super_95	2.75	2.8	-1.79	LIBRE	2026-05-28 17:11:02.849302	2026-05-28 17:11:02.849303
+56	2021-08-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849303	2026-05-28 17:11:02.849303
+57	2021-09-11	extra	2	2	0	DENTRO	2026-05-28 17:11:02.849304	2026-05-28 17:11:02.849304
+58	2021-09-11	ecopais	2	2	0	DENTRO	2026-05-28 17:11:02.849305	2026-05-28 17:11:02.849305
+59	2021-09-11	super_95	2.68	2.75	-2.55	LIBRE	2026-05-28 17:11:02.849305	2026-05-28 17:11:02.849306
+60	2021-09-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849306	2026-05-28 17:11:02.849306
+61	2021-10-11	extra	2.05	2	2.5	DENTRO	2026-05-28 17:11:02.849307	2026-05-28 17:11:02.849307
+62	2021-10-11	ecopais	2.05	2	2.5	DENTRO	2026-05-28 17:11:02.849307	2026-05-28 17:11:02.849308
+63	2021-10-11	super_95	2.85	2.68	6.34	LIBRE	2026-05-28 17:11:02.849308	2026-05-28 17:11:02.849309
+64	2021-10-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849309	2026-05-28 17:11:02.849309
+65	2021-11-11	extra	2.1	2.05	2.44	DENTRO	2026-05-28 17:11:02.84931	2026-05-28 17:11:02.84931
+66	2021-11-11	ecopais	2.1	2.05	2.44	DENTRO	2026-05-28 17:11:02.849311	2026-05-28 17:11:02.849311
+67	2021-11-11	super_95	3.1	2.85	8.77	LIBRE	2026-05-28 17:11:02.849311	2026-05-28 17:11:02.849312
+68	2021-11-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849312	2026-05-28 17:11:02.849312
+69	2021-12-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849313	2026-05-28 17:11:02.849313
+70	2021-12-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849314	2026-05-28 17:11:02.849314
+71	2021-12-11	super_95	3.05	3.1	-1.61	LIBRE	2026-05-28 17:11:02.849314	2026-05-28 17:11:02.849315
+72	2021-12-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849315	2026-05-28 17:11:02.849316
+73	2022-01-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849316	2026-05-28 17:11:02.849317
+74	2022-01-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849317	2026-05-28 17:11:02.849317
+75	2022-01-11	super_95	3.1	3.05	1.64	LIBRE	2026-05-28 17:11:02.849318	2026-05-28 17:11:02.849318
+76	2022-01-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849318	2026-05-28 17:11:02.849319
+77	2022-02-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849319	2026-05-28 17:11:02.849319
+78	2022-02-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.84932	2026-05-28 17:11:02.84932
+79	2022-02-11	super_95	3.2	3.1	3.23	LIBRE	2026-05-28 17:11:02.849321	2026-05-28 17:11:02.849321
+80	2022-02-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849321	2026-05-28 17:11:02.849321
+81	2022-03-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849322	2026-05-28 17:11:02.849322
+82	2022-03-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849323	2026-05-28 17:11:02.849323
+83	2022-03-11	super_95	3.5	3.2	9.37	LIBRE	2026-05-28 17:11:02.849323	2026-05-28 17:11:02.849324
+84	2022-03-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849324	2026-05-28 17:11:02.849324
+85	2022-04-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849325	2026-05-28 17:11:02.849325
+86	2022-04-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849325	2026-05-28 17:11:02.849326
+87	2022-04-11	super_95	3.72	3.5	6.29	LIBRE	2026-05-28 17:11:02.849326	2026-05-28 17:11:02.849327
+88	2022-04-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849327	2026-05-28 17:11:02.849327
+89	2022-05-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849328	2026-05-28 17:11:02.849328
+90	2022-05-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849328	2026-05-28 17:11:02.849329
+91	2022-05-11	super_95	3.81	3.72	2.42	LIBRE	2026-05-28 17:11:02.849329	2026-05-28 17:11:02.849329
+92	2022-05-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.84933	2026-05-28 17:11:02.84933
+93	2022-06-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849331	2026-05-28 17:11:02.849331
+94	2022-06-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849331	2026-05-28 17:11:02.849332
+95	2022-06-11	super_95	4.1	3.81	7.61	LIBRE	2026-05-28 17:11:02.849332	2026-05-28 17:11:02.849332
+96	2022-06-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849333	2026-05-28 17:11:02.849333
+97	2022-07-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849334	2026-05-28 17:11:02.849334
+98	2022-07-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849334	2026-05-28 17:11:02.849335
+99	2022-07-11	super_95	3.9	4.1	-4.88	LIBRE	2026-05-28 17:11:02.849335	2026-05-28 17:11:02.849336
+100	2022-07-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849336	2026-05-28 17:11:02.849337
+101	2022-08-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849337	2026-05-28 17:11:02.849338
+102	2022-08-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849338	2026-05-28 17:11:02.849338
+103	2022-08-11	super_95	3.65	3.9	-6.41	LIBRE	2026-05-28 17:11:02.849339	2026-05-28 17:11:02.849339
+104	2022-08-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.84934	2026-05-28 17:11:02.84934
+105	2022-09-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849341	2026-05-28 17:11:02.849341
+106	2022-09-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849341	2026-05-28 17:11:02.849342
+107	2022-09-11	super_95	3.45	3.65	-5.48	LIBRE	2026-05-28 17:11:02.849346	2026-05-28 17:11:02.849347
+108	2022-09-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849347	2026-05-28 17:11:02.849347
+109	2022-10-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849348	2026-05-28 17:11:02.849348
+110	2022-10-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849349	2026-05-28 17:11:02.849349
+111	2022-10-11	super_95	3.38	3.45	-2.03	LIBRE	2026-05-28 17:11:02.849349	2026-05-28 17:11:02.84935
+112	2022-10-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.84935	2026-05-28 17:11:02.849351
+113	2022-11-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849351	2026-05-28 17:11:02.849351
+114	2022-11-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849352	2026-05-28 17:11:02.849352
+115	2022-11-11	super_95	3.2	3.38	-5.33	LIBRE	2026-05-28 17:11:02.849353	2026-05-28 17:11:02.849353
+116	2022-11-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849353	2026-05-28 17:11:02.849354
+117	2022-12-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849354	2026-05-28 17:11:02.849354
+118	2022-12-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849355	2026-05-28 17:11:02.849355
+119	2022-12-11	super_95	3.05	3.2	-4.69	LIBRE	2026-05-28 17:11:02.849356	2026-05-28 17:11:02.849356
+120	2022-12-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849357	2026-05-28 17:11:02.849357
+121	2023-01-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849357	2026-05-28 17:11:02.849358
+122	2023-01-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849358	2026-05-28 17:11:02.849359
+123	2023-01-11	super_95	2.95	3.05	-3.28	LIBRE	2026-05-28 17:11:02.849359	2026-05-28 17:11:02.849359
+124	2023-01-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.84936	2026-05-28 17:11:02.84936
+125	2023-02-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849361	2026-05-28 17:11:02.849361
+126	2023-02-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849361	2026-05-28 17:11:02.849362
+127	2023-02-11	super_95	2.85	2.95	-3.39	LIBRE	2026-05-28 17:11:02.849362	2026-05-28 17:11:02.849363
+128	2023-02-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849363	2026-05-28 17:11:02.849363
+129	2023-03-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849364	2026-05-28 17:11:02.849364
+130	2023-03-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849365	2026-05-28 17:11:02.849365
+131	2023-03-11	super_95	2.8	2.85	-1.75	LIBRE	2026-05-28 17:11:02.849365	2026-05-28 17:11:02.849366
+132	2023-03-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849366	2026-05-28 17:11:02.849367
+133	2023-04-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849367	2026-05-28 17:11:02.849367
+134	2023-04-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849368	2026-05-28 17:11:02.849368
+135	2023-04-11	super_95	2.85	2.8	1.79	LIBRE	2026-05-28 17:11:02.849369	2026-05-28 17:11:02.849369
+136	2023-04-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.84937	2026-05-28 17:11:02.84937
+137	2023-05-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.84937	2026-05-28 17:11:02.849371
+138	2023-05-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849371	2026-05-28 17:11:02.849372
+139	2023-05-11	super_95	2.75	2.85	-3.51	LIBRE	2026-05-28 17:11:02.849372	2026-05-28 17:11:02.849372
+140	2023-05-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849373	2026-05-28 17:11:02.849373
+141	2023-06-11	extra	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849374	2026-05-28 17:11:02.849374
+142	2023-06-11	ecopais	2.1	2.1	0	DENTRO	2026-05-28 17:11:02.849375	2026-05-28 17:11:02.849375
+143	2023-06-11	super_95	2.7	2.75	-1.82	LIBRE	2026-05-28 17:11:02.849375	2026-05-28 17:11:02.849376
+144	2023-06-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849376	2026-05-28 17:11:02.849377
+145	2023-07-11	extra	2.4	2.1	14.29	TECHO	2026-05-28 17:11:02.849377	2026-05-28 17:11:02.849377
+146	2023-07-11	ecopais	2.4	2.1	14.29	TECHO	2026-05-28 17:11:02.849378	2026-05-28 17:11:02.849378
+147	2023-07-11	super_95	2.75	2.7	1.85	LIBRE	2026-05-28 17:11:02.849379	2026-05-28 17:11:02.849379
+148	2023-07-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849379	2026-05-28 17:11:02.849392
+149	2023-08-11	extra	2.4	2.4	0	DENTRO	2026-05-28 17:11:02.849405	2026-05-28 17:11:02.849406
+150	2023-08-11	ecopais	2.4	2.4	0	DENTRO	2026-05-28 17:11:02.849406	2026-05-28 17:11:02.849407
+151	2023-08-11	super_95	2.9	2.75	5.45	LIBRE	2026-05-28 17:11:02.849407	2026-05-28 17:11:02.849408
+152	2023-08-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849408	2026-05-28 17:11:02.849408
+153	2023-09-11	extra	2.4	2.4	0	DENTRO	2026-05-28 17:11:02.849409	2026-05-28 17:11:02.849409
+154	2023-09-11	ecopais	2.4	2.4	0	DENTRO	2026-05-28 17:11:02.84941	2026-05-28 17:11:02.84941
+155	2023-09-11	super_95	3.1	2.9	6.9	LIBRE	2026-05-28 17:11:02.849411	2026-05-28 17:11:02.849411
+156	2023-09-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849411	2026-05-28 17:11:02.849412
+157	2023-10-11	extra	2.465	2.4	2.71	DENTRO	2026-05-28 17:11:02.849412	2026-05-28 17:11:02.849413
+158	2023-10-11	ecopais	2.465	2.4	2.71	DENTRO	2026-05-28 17:11:02.849413	2026-05-28 17:11:02.849413
+159	2023-10-11	super_95	3.05	3.1	-1.61	LIBRE	2026-05-28 17:11:02.849414	2026-05-28 17:11:02.849414
+160	2023-10-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849415	2026-05-28 17:11:02.849415
+161	2023-11-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849416	2026-05-28 17:11:02.849416
+162	2023-11-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849416	2026-05-28 17:11:02.849417
+163	2023-11-11	super_95	2.95	3.05	-3.28	LIBRE	2026-05-28 17:11:02.849417	2026-05-28 17:11:02.849418
+164	2023-11-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849418	2026-05-28 17:11:02.849418
+165	2023-12-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849419	2026-05-28 17:11:02.849419
+166	2023-12-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.84942	2026-05-28 17:11:02.84942
+167	2023-12-11	super_95	2.8	2.95	-5.08	LIBRE	2026-05-28 17:11:02.849421	2026-05-28 17:11:02.849421
+168	2023-12-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849421	2026-05-28 17:11:02.849422
+169	2024-01-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849422	2026-05-28 17:11:02.849422
+170	2024-01-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849423	2026-05-28 17:11:02.849423
+171	2024-01-11	super_95	2.72	2.8	-2.86	LIBRE	2026-05-28 17:11:02.849424	2026-05-28 17:11:02.849424
+172	2024-01-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849425	2026-05-28 17:11:02.849425
+173	2024-02-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849425	2026-05-28 17:11:02.849426
+174	2024-02-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849426	2026-05-28 17:11:02.849426
+175	2024-02-11	super_95	2.75	2.72	1.1	LIBRE	2026-05-28 17:11:02.849427	2026-05-28 17:11:02.849427
+176	2024-02-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849428	2026-05-28 17:11:02.849428
+177	2024-03-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849429	2026-05-28 17:11:02.849429
+178	2024-03-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849429	2026-05-28 17:11:02.84943
+179	2024-03-11	super_95	2.8	2.75	1.82	LIBRE	2026-05-28 17:11:02.84943	2026-05-28 17:11:02.84943
+180	2024-03-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849431	2026-05-28 17:11:02.849431
+181	2024-04-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849432	2026-05-28 17:11:02.849432
+182	2024-04-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849432	2026-05-28 17:11:02.849433
+183	2024-04-11	super_95	2.85	2.8	1.79	LIBRE	2026-05-28 17:11:02.849433	2026-05-28 17:11:02.849434
+184	2024-04-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849434	2026-05-28 17:11:02.849434
+185	2024-05-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849435	2026-05-28 17:11:02.849435
+186	2024-05-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849436	2026-05-28 17:11:02.849436
+187	2024-05-11	super_95	2.95	2.85	3.51	LIBRE	2026-05-28 17:11:02.849436	2026-05-28 17:11:02.849437
+188	2024-05-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849437	2026-05-28 17:11:02.849438
+189	2024-06-11	extra	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849438	2026-05-28 17:11:02.849438
+190	2024-06-11	ecopais	2.465	2.465	0	DENTRO	2026-05-28 17:11:02.849439	2026-05-28 17:11:02.849439
+191	2024-06-11	super_95	2.9	2.95	-1.69	LIBRE	2026-05-28 17:11:02.84944	2026-05-28 17:11:02.849442
+192	2024-06-11	diesel	1.088	1.088	0	DENTRO	2026-05-28 17:11:02.849442	2026-05-28 17:11:02.849443
+193	2024-07-11	extra	2.722	2.465	10.43	TECHO	2026-05-28 17:11:02.849443	2026-05-28 17:11:02.849443
+194	2024-07-11	ecopais	2.722	2.465	10.43	TECHO	2026-05-28 17:11:02.849444	2026-05-28 17:11:02.849444
+195	2024-07-11	super_95	3.1	2.9	6.9	LIBRE	2026-05-28 17:11:02.849445	2026-05-28 17:11:02.849445
+196	2024-07-11	diesel	1.8	1.088	65.44	TECHO	2026-05-28 17:11:02.849445	2026-05-28 17:11:02.849446
+197	2024-08-11	extra	2.722	2.722	0	DENTRO	2026-05-28 17:11:02.849446	2026-05-28 17:11:02.849447
+198	2024-08-11	ecopais	2.722	2.722	0	DENTRO	2026-05-28 17:11:02.849447	2026-05-28 17:11:02.849448
+199	2024-08-11	super_95	3.05	3.1	-1.61	LIBRE	2026-05-28 17:11:02.849448	2026-05-28 17:11:02.849448
+200	2024-08-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849449	2026-05-28 17:11:02.849449
+201	2024-09-11	extra	2.742	2.722	0.73	DENTRO	2026-05-28 17:11:02.84945	2026-05-28 17:11:02.84945
+202	2024-09-11	ecopais	2.742	2.722	0.73	DENTRO	2026-05-28 17:11:02.849451	2026-05-28 17:11:02.849451
+203	2024-09-11	super_95	3	3.05	-1.64	LIBRE	2026-05-28 17:11:02.849451	2026-05-28 17:11:02.849452
+204	2024-09-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849452	2026-05-28 17:11:02.849453
+205	2024-10-11	extra	2.796	2.742	1.97	DENTRO	2026-05-28 17:11:02.849453	2026-05-28 17:11:02.849453
+206	2024-10-11	ecopais	2.796	2.742	1.97	DENTRO	2026-05-28 17:11:02.849454	2026-05-28 17:11:02.849454
+207	2024-10-11	super_95	3.1	3	3.33	LIBRE	2026-05-28 17:11:02.849455	2026-05-28 17:11:02.849455
+208	2024-10-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849455	2026-05-28 17:11:02.849456
+209	2024-11-11	extra	2.783	2.796	-0.46	DENTRO	2026-05-28 17:11:02.849456	2026-05-28 17:11:02.849457
+210	2024-11-11	ecopais	2.783	2.796	-0.46	DENTRO	2026-05-28 17:11:02.849457	2026-05-28 17:11:02.849458
+211	2024-11-11	super_95	2.95	3.1	-4.84	LIBRE	2026-05-28 17:11:02.849458	2026-05-28 17:11:02.849458
+212	2024-11-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849459	2026-05-28 17:11:02.849459
+213	2024-12-11	extra	2.723	2.783	-2.16	DENTRO	2026-05-28 17:11:02.84946	2026-05-28 17:11:02.84946
+214	2024-12-11	ecopais	2.723	2.783	-2.16	DENTRO	2026-05-28 17:11:02.849461	2026-05-28 17:11:02.849461
+215	2024-12-11	super_95	2.85	2.95	-3.39	LIBRE	2026-05-28 17:11:02.849461	2026-05-28 17:11:02.849462
+216	2024-12-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849462	2026-05-28 17:11:02.849463
+217	2025-01-11	extra	2.692	2.723	-1.14	DENTRO	2026-05-28 17:11:02.849463	2026-05-28 17:11:02.849464
+218	2025-01-11	ecopais	2.692	2.723	-1.14	DENTRO	2026-05-28 17:11:02.849464	2026-05-28 17:11:02.849464
+219	2025-01-11	super_95	2.8	2.85	-1.75	LIBRE	2026-05-28 17:11:02.849465	2026-05-28 17:11:02.849465
+220	2025-01-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849466	2026-05-28 17:11:02.849466
+221	2025-02-11	extra	2.733	2.692	1.52	DENTRO	2026-05-28 17:11:02.849466	2026-05-28 17:11:02.849467
+222	2025-02-11	ecopais	2.733	2.692	1.52	DENTRO	2026-05-28 17:11:02.849467	2026-05-28 17:11:02.849468
+223	2025-02-11	super_95	2.9	2.8	3.57	LIBRE	2026-05-28 17:11:02.849468	2026-05-28 17:11:02.849468
+224	2025-02-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849469	2026-05-28 17:11:02.849469
+225	2025-03-11	extra	2.786	2.733	1.94	DENTRO	2026-05-28 17:11:02.84947	2026-05-28 17:11:02.84947
+226	2025-03-11	ecopais	2.786	2.733	1.94	DENTRO	2026-05-28 17:11:02.849471	2026-05-28 17:11:02.849471
+227	2025-03-11	super_95	2.95	2.9	1.72	LIBRE	2026-05-28 17:11:02.849471	2026-05-28 17:11:02.849472
+228	2025-03-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849472	2026-05-28 17:11:02.849473
+229	2025-04-11	extra	2.826	2.786	1.44	DENTRO	2026-05-28 17:11:02.849473	2026-05-28 17:11:02.849473
+230	2025-04-11	ecopais	2.826	2.786	1.44	DENTRO	2026-05-28 17:11:02.849474	2026-05-28 17:11:02.849474
+231	2025-04-11	super_95	3.05	2.95	3.39	LIBRE	2026-05-28 17:11:02.849475	2026-05-28 17:11:02.849475
+232	2025-04-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849476	2026-05-28 17:11:02.849476
+233	2025-05-11	extra	2.853	2.826	0.96	DENTRO	2026-05-28 17:11:02.849476	2026-05-28 17:11:02.849477
+234	2025-05-11	ecopais	2.853	2.826	0.96	DENTRO	2026-05-28 17:11:02.849479	2026-05-28 17:11:02.849479
+235	2025-05-11	super_95	3.12	3.05	2.3	LIBRE	2026-05-28 17:11:02.84948	2026-05-28 17:11:02.84948
+236	2025-05-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.84948	2026-05-28 17:11:02.849481
+237	2025-06-11	extra	2.879	2.853	0.91	DENTRO	2026-05-28 17:11:02.849481	2026-05-28 17:11:02.849482
+238	2025-06-11	ecopais	2.879	2.853	0.91	DENTRO	2026-05-28 17:11:02.849482	2026-05-28 17:11:02.849482
+239	2025-06-11	super_95	3.15	3.12	0.96	LIBRE	2026-05-28 17:11:02.849483	2026-05-28 17:11:02.849483
+240	2025-06-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849484	2026-05-28 17:11:02.849484
+241	2025-07-11	extra	2.896	2.879	0.59	DENTRO	2026-05-28 17:11:02.849485	2026-05-28 17:11:02.849485
+242	2025-07-11	ecopais	2.896	2.879	0.59	DENTRO	2026-05-28 17:11:02.849485	2026-05-28 17:11:02.849486
+243	2025-07-11	super_95	3.2	3.15	1.59	LIBRE	2026-05-28 17:11:02.849486	2026-05-28 17:11:02.849486
+244	2025-07-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.849487	2026-05-28 17:11:02.849487
+245	2025-08-11	extra	2.91	2.896	0.48	DENTRO	2026-05-28 17:11:02.849488	2026-05-28 17:11:02.849488
+246	2025-08-11	ecopais	2.91	2.896	0.48	DENTRO	2026-05-28 17:11:02.849489	2026-05-28 17:11:02.849489
+247	2025-08-11	super_95	3.25	3.2	1.56	LIBRE	2026-05-28 17:11:02.849489	2026-05-28 17:11:02.84949
+248	2025-08-11	diesel	1.8	1.8	0	DENTRO	2026-05-28 17:11:02.84949	2026-05-28 17:11:02.849491
+249	2025-09-11	extra	2.879	2.91	-1.07	DENTRO	2026-05-28 17:11:02.849491	2026-05-28 17:11:02.849492
+250	2025-09-11	ecopais	2.879	2.91	-1.07	DENTRO	2026-05-28 17:11:02.849492	2026-05-28 17:11:02.849492
+251	2025-09-11	super_95	3.18	3.25	-2.15	LIBRE	2026-05-28 17:11:02.849493	2026-05-28 17:11:02.849493
+252	2025-09-11	diesel	2.8	1.8	55.56	TECHO	2026-05-28 17:11:02.849494	2026-05-28 17:11:02.849494
+253	2025-10-11	extra	2.92	2.879	1.42	DENTRO	2026-05-28 17:11:02.849494	2026-05-28 17:11:02.849495
+254	2025-10-11	ecopais	2.92	2.879	1.42	DENTRO	2026-05-28 17:11:02.849495	2026-05-28 17:11:02.849496
+255	2025-10-11	super_95	3.3	3.18	3.77	LIBRE	2026-05-28 17:11:02.849496	2026-05-28 17:11:02.849496
+256	2025-10-11	diesel	2.8	2.8	0	DENTRO	2026-05-28 17:11:02.849497	2026-05-28 17:11:02.849497
+257	2025-11-11	extra	2.895	2.92	-0.86	DENTRO	2026-05-28 17:11:02.849498	2026-05-28 17:11:02.849498
+258	2025-11-11	ecopais	2.895	2.92	-0.86	DENTRO	2026-05-28 17:11:02.849499	2026-05-28 17:11:02.849499
+259	2025-11-11	super_95	3.25	3.3	-1.52	LIBRE	2026-05-28 17:11:02.849499	2026-05-28 17:11:02.8495
+260	2025-11-11	diesel	2.75	2.8	-1.79	DENTRO	2026-05-28 17:11:02.8495	2026-05-28 17:11:02.8495
+261	2025-12-11	extra	2.87	2.895	-0.86	DENTRO	2026-05-28 17:11:02.849501	2026-05-28 17:11:02.849501
+262	2025-12-11	ecopais	2.87	2.895	-0.86	DENTRO	2026-05-28 17:11:02.849502	2026-05-28 17:11:02.849502
+263	2025-12-11	super_95	3.2	3.25	-1.54	LIBRE	2026-05-28 17:11:02.849503	2026-05-28 17:11:02.849503
+264	2025-12-11	diesel	2.7	2.75	-1.82	DENTRO	2026-05-28 17:11:02.849503	2026-05-28 17:11:02.849504
+265	2026-01-11	extra	2.855	2.87	-0.52	DENTRO	2026-05-28 17:11:02.849504	2026-05-28 17:11:02.849505
+266	2026-01-11	ecopais	2.855	2.87	-0.52	DENTRO	2026-05-28 17:11:02.849505	2026-05-28 17:11:02.849505
+267	2026-01-11	super_95	3.28	3.2	2.5	LIBRE	2026-05-28 17:11:02.849506	2026-05-28 17:11:02.849506
+268	2026-01-11	diesel	2.72	2.7	0.74	DENTRO	2026-05-28 17:11:02.849507	2026-05-28 17:11:02.849507
+269	2026-02-11	extra	2.875	2.855	0.7	DENTRO	2026-05-28 17:11:02.849507	2026-05-28 17:11:02.849508
+270	2026-02-11	ecopais	2.875	2.855	0.7	DENTRO	2026-05-28 17:11:02.849508	2026-05-28 17:11:02.849509
+271	2026-02-11	super_95	3.35	3.28	2.13	LIBRE	2026-05-28 17:11:02.849509	2026-05-28 17:11:02.849509
+272	2026-02-11	diesel	2.8	2.72	2.94	DENTRO	2026-05-28 17:11:02.84951	2026-05-28 17:11:02.84951
+273	2026-03-11	extra	2.89	2.875	0.52	DENTRO	2026-05-28 17:11:02.849511	2026-05-28 17:11:02.849511
+274	2026-03-11	ecopais	2.89	2.875	0.52	DENTRO	2026-05-28 17:11:02.849512	2026-05-28 17:11:02.849512
+275	2026-03-11	super_95	3.41	3.35	1.79	LIBRE	2026-05-28 17:11:02.849512	2026-05-28 17:11:02.849513
+276	2026-03-11	diesel	2.828	2.8	1	DENTRO	2026-05-28 17:11:02.849513	2026-05-28 17:11:02.849514
+302	2026-05-11	extra	3.164	3.024	4.63	DENTRO	\N	\N
+303	2026-05-11	ecopais	3.164	3.024	4.63	DENTRO	\N	\N
+304	2026-05-11	super_95	4.81	4.57	5.25	LIBRE	\N	\N
+305	2026-05-11	diesel	3.103	2.962	4.76	DENTRO	\N	\N
+300	2026-04-11	super_95	4.57	3.41	34.02	LIBRE	\N	\N
+299	2026-04-11	ecopais	3.024	2.89	4.64	DENTRO	\N	\N
+298	2026-04-11	extra	3.024	2.89	4.64	DENTRO	\N	\N
+301	2026-04-11	diesel	2.962	2.828	4.74	DENTRO	\N	\N
+306	2026-06-11	extra	3.312	3.164	4.68	TECHO	\N	\N
+307	2026-06-11	ecopais	3.312	3.164	4.68	TECHO	\N	\N
+308	2026-06-11	super_95	5.7	4.81	18.5	LIBRE	\N	\N
+309	2026-06-11	diesel	3.251	3.103	4.77	TECHO	\N	\N
+\.
+
+
+--
+-- Data for Name: news_cache; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.news_cache (id, title, source, url, published_date, sentiment, sentiment_score, summary, fetched_at) FROM stdin;
+1	Petroecuador no ha aprovechado la bonanza de los precios del petróleo. Producción sigue cayendo - El Oriente	El Oriente	https://news.google.com/rss/articles/CBMi0AFBVV95cUxOaFl2WUtMSnFJRGtsS2FYZUJZNGVpRkcwSThqS1hLZnlYSUJUdF92VzJOOGRDWU00Snk4ZUFxREx6VHZiZzhhSlM1dWI0dG9CcEZkSktHUjM3bnlFdUdVbzJ6bUoxUnNmZ0ZzX2taS0V4aGtqU09Hb0ltSVBKSVN6WDloN01nR1FlWnFpRmNNY20zUWRyLTdkNGZTeURuMmdkSFM0RUxHb1duOTlLM0t6aWlrOWxmM3RsV0FDM09xWHlYTGZ3T0xuWWRYRXowWGpw?oc=5	2026-05-28 14:18:13	neutro	0.103	Petroecuador no ha aprovechado la bonanza de los precios del petróleo. Producción sigue cayendo El Oriente	2026-05-28 17:12:20.840227
+2	En tres meses de alza de precios del petróleo, Petroecuador no ha aprovechado el boom y su producción sigue en descenso - Primicias	Primicias	https://news.google.com/rss/articles/CBMirwFBVV95cUxNS2VPWHBGRVhiZVBWT0F0Q01qSFk1X1hDRmtSb09sNkt3V29VRVJfajgxS25nMTU3dHNuSm1tenl5dHpJTDVvdEpfbm11MTlaS00xVUNHRTNpZDJKanBORW1jZzRvcHpBTllTZEpFYmhEejR6VjZOVEJOMlhZbGVhMFRnc3FfZFQySF9JUVY2MnFFSk8tbnoxcGN5YXpBYjJJcmEwVElkbWNYcmhHbUdN?oc=5	2026-05-28 10:55:00	positivo	0.34	En tres meses de alza de precios del petróleo, Petroecuador no ha aprovechado el boom y su producción sigue en descenso Primicias	2026-05-28 17:12:20.840228
+3	Ecuador importa más combustibles que nunca: salvar la Refinería de Esmeraldas costaría hasta $2.700 millones - Diario La Hora	Diario La Hora	https://news.google.com/rss/articles/CBMi8gFBVV95cUxPZzJ4d19ySkg2RTlhblAtcXQxeVljTWZTVFJTTmFTd01BU1B4YUlCNjlESjVESmVoRW4zTmRad0t2VEFQV0pnTXdvQUJkY3NPR1gxRVFWZjdYanBMclotbENaaUY5Q090SzJRc0k4RnoydlBOa0pvemw4eDVoVzlKSFctWHFMSWxLZjRxdEUyZFZaVVQ4NVZFM3RXSmdoRUxSNGNlS1UxSTk4Sks1V0lhNDJVSWFCRVptZ1ZVak1vTTVSNWxVTmtyZWpvcmRnbGMybnNvM215d0FJUlVsdlUzMnpFazhEOXFrNVJTcXVxLVhwdw?oc=5	2026-05-27 05:20:00	neutro	0	Ecuador importa más combustibles que nunca: salvar la Refinería de Esmeraldas costaría hasta $2.700 millones Diario La Hora	2026-05-28 17:12:20.840229
+4	CUENCA-NUEVOS PRECIOS-COMBUSTIBLES - La República EC	La República EC	https://news.google.com/rss/articles/CBMiqAFBVV95cUxOdjk3Nm9wMWowSUNSbGdJaEhhMXJndkVmTEpOY0tLd0swNUtBRWhqbFFIZGdJQmFYVjFyWTlyX3JwTFo5MGxRZXgtdXdaWEpGWHFoN0FYTEs4a1lnRjVvNWkzd2ZJWlpldnFBaWcwM3liMGNyZVpaSllPdHNkYmVfWGZYQWhGdVBvLXBQQm5ZYmlycjJWX1F2dWYzb2JmN0hWRWlKemNfU2U?oc=5	2026-05-26 07:00:00	neutro	0	CUENCA-NUEVOS PRECIOS-COMBUSTIBLES La República EC	2026-05-28 17:12:20.840229
+5	Daniel Noboa reforma reglamento que regula los precios de derivados de hidrocarburos para provisión a termoeléctricas - El Universo	El Universo	https://news.google.com/rss/articles/CBMi3gFBVV95cUxNX2t6MlFSVkR6OG9LQnhnNkVkWmNCcmZ6OF9FdWZQMWx4RG14bk9DWmgxczRFUFRCTWZIblBmbk9CbWtLa0xNY0RZNm9EVlNuMDBGcE9SaWFhcWNOQVhHcm9tdzB5aU82ckpmM1Z4dlpRMGlqVUVmd0FLa0E1RE5CRS1FUFFCWHlEMUV2aThOX3R1SmJEZnY2VExIbmNpMzBOejFvdGl1RmxqZXNleVQyaFk0eGdPWVBmNUhIYW9Xc1NVbmY4UmI1bVRIdFI0VHQzSDRnLWxfUDN1M0RrZkHSAfIBQVVfeXFMUF9BU3JUU1lDSXlacDlxVllURHBVQWtjV3RQY0hTc1ZsTE52dTNBQ29GSHFxOGhlUFdrbHQ5WDhYYkZBNUJWeXZKcVhYMTU0cXVwMjkyZ2ZFNkkxRHFFdWZocVZkM0k0bXpjZXd1X1c5YzZ3Wm9rS3NlUktVTTZyU1lTWjBHMzlmalU1WHFWWnFTQ21QbmxwRFdjejcyWGZ1SHNLbkhfWEw1LV9ibVo1OF9FaVZZdy1mMnVRNlpiVFJSVi1KZmpHamJXWHVMUlJmWXhlMFJJWVNGY083NmFWMVVTRm04R0c3Z1NZaE5DVGlZRkE?oc=5	2026-05-22 19:05:00	neutro	0	Daniel Noboa reforma reglamento que regula los precios de derivados de hidrocarburos para provisión a termoeléctricas El Universo	2026-05-28 17:12:20.840229
+6	Noboa modifica el reglamento de precios de combustibles para el sector eléctrico - Vistazo	Vistazo	https://news.google.com/rss/articles/CBMiyAFBVV95cUxPd2VhWlktd0Z6V05xQWdXTmZoaThLMThjakpwOFVrVGJkdmRFUnNTVXNzeEJGVVZ5YWU0MmFUTkVVWGNjaFhYRnlBUEwxaW53NlhhNnh2RDJza2w1bnJ3bW9sS3Y4eDV5b3NFNG1RUklGMTNVNmNSQTZGN19sVTFsbGpJbWkxdWtwSF9oLUtQbUU0YXdQaF9sbzdQU2xWc2JQMUZWUkdDSURSdUdTMEVlWERqT0ZqU1dPMGtkRGF6bmpxVmVjRXlHStIBzgFBVV95cUxNblRWdGJGSTd4VEcxcFpLRUpCdWR4TjRBZ0tfUjB5a1JiSEFycWc2V1k4RGE1R0J5LUIyOUtta2xhdWRrUkMzbWJ5bmhaUHdTbXp4R0VWWmJkT2ZZdGM0bkRMOGpuNkc0Y2FUdFF0NmdveG5UY3ZXMGlXc05TczhQWkptX3ZuZzloSzR3bUx3V09DV051QWJiOFU3d0dSSjFHOElCc2JIZlpfa2R5U1VGZHJnSENqLVA4M2JxLTFpQlVYZ0xYcnNiR3JtdURMdw?oc=5	2026-05-22 12:50:28	neutro	0	Noboa modifica el reglamento de precios de combustibles para el sector eléctrico Vistazo	2026-05-28 17:12:20.84023
+7	ESPECIAL | La eliminación del subsidio al diésel mejoró las cuentas fiscales, con retos económicos aún por resolver - Primicias	Primicias	https://news.google.com/rss/articles/CBMitAFBVV95cUxNbDFQVTZxQ2QzQ1B1TGVxbjBTNW5jQUF6MVJCTjB4Si1JLTFuQkhYaGt4cVNhN3ZKdE5BQ2FBaGZJdFNLdmY3V2YxOHRLcHBHcHBua3JaeXZtWUd0RUpxVUZiMTFpS29DUVZXbWxzVzZCZzVVclktcFhia3JXWmRZNWNkTlJvOUV6Ql96TjBjV1B1b3ZaT3Z6cUtpcmx6XzNmM3dUeGtibGxYcjZPR214RDF0Vjk?oc=5	2026-05-20 10:55:00	positivo	0.527	ESPECIAL | La eliminación del subsidio al diésel mejoró las cuentas fiscales, con retos económicos aún por resolver Primicias	2026-05-28 17:12:20.84023
+8	Subsidios a combustibles en Ecuador costarán hasta $2.000 millones por petróleo caro - Diario La Hora	Diario La Hora	https://news.google.com/rss/articles/CBMi0wFBVV95cUxPcldvU0ZwT0Q4QTRfa0FCbjE4Zk5xcTZjVTlsWUdJVXBkUjIzR0QyUEZpZ1B1ZE51NDFlMlJkcS1wRFRJLXRpRWNIUU5WOVF1TFh0NmtqSUU0YUtCbjd3cWwtc3JBM3gzcDVSU2NkRW5rZlVCb2N6blpUc3o2UUN4UjZGNDNMNnpQaG42TGRCRFhLUjRpYWpvdUlTVFQtelYtRFZQRVNtOEhRN3BNZDZxY3pqOEE1U1R5R1I3UlJIS0RLaGI1UFBUSGJhMWRvc2RwNGs4?oc=5	2026-05-18 07:00:00	neutro	0	Subsidios a combustibles en Ecuador costarán hasta $2.000 millones por petróleo caro Diario La Hora	2026-05-28 17:12:20.84023
+9	Ecuador debe vender casi dos barriles de petróleo para comprar uno de diésel - expreso.ec	expreso.ec	https://news.google.com/rss/articles/CBMisAFBVV95cUxPSWlQVlpiZlNCQ2NsRXllVUpSMDJ0NWQ5dVBuU1lfY2FIMjg1UlhzYUxJWVJZdHhhQ0FlUlAxdVdZRUYtMTdXaWJSZ281QVk1bWpNTVk5SGszS0tVVXN4clQ0bmo1VFYxXzdWNHpIWDFsMEhJUERGNGNFYlZ2SWpjbnlxRWEyS3pJcGF1VElYc3I0Vk5BY19KcFZiZHd2ZS1ZLWloTFNhVWIxNDktTHNoag?oc=5	2026-05-17 07:00:00	neutro	0	Ecuador debe vender casi dos barriles de petróleo para comprar uno de diésel expreso.ec	2026-05-28 17:12:20.840231
+10	Ecuador: precios de gasolinas y diésel suben en medio de alza internacional y desabastecimiento - teleSUR	teleSUR	https://news.google.com/rss/articles/CBMickFVX3lxTE5lR3NGYkUtZThnYmV5bS1jcmZuRGVyZ3puR3ZpMmFnbm16UXVPSVZOOU1jNjE2WjlCOURzbHhwRnhQV1Nad08wMzR2VFc3NXlvRl93VTByWXY5Snk1Vy02VFJjSmVDZ19jek53eFlPbTBWdw?oc=5	2026-05-12 18:04:03	positivo	0.718	Ecuador: precios de gasolinas y diésel suben en medio de alza internacional y desabastecimiento teleSUR	2026-05-28 17:12:20.840231
+11	Nuevo incremento de los precios de los combustibles en Ecuador - Prensa Latina	Prensa Latina	https://news.google.com/rss/articles/CBMipgFBVV95cUxOVkFBWDVtWE9pckZCSTJEMFBBR0NyREhoMEpCWWRxbjMxd1RaWFM4SFR2ejg0dTRhZzMyVl9BWTlCZDFuZ2lRR1hKTC02LWZOU0Z2Q29XTU1JYmR5T0kyV3N0WWlWdFZLbXR0bWlmMVczb1JaYWZhM0dYb0hsRGZBUmYtRnJwa01KRFhFb0NFdXNCUkVrVUNrZm4zTXA5bnJQYTlQMnln?oc=5	2026-05-12 14:04:00	positivo	0.612	Nuevo incremento de los precios de los combustibles en Ecuador Prensa Latina	2026-05-28 17:12:20.840231
+12	Precio de la gasolina de mayor octanaje en Ecuador se dispara a niveles de EE.UU.: así quedaron las tarifas - Bloomberg Línea	Bloomberg Línea	https://news.google.com/rss/articles/CBMi7wFBVV95cUxPM1hFQzFRWmtwLWNCcFZEeFZTTWxqUzF0dVF5c2ZPMGFhRHNaOWhZRTBDZ1ppRk1VNzNHNFRwazZLcDBLcC1wRWhpcDl0d1pjMWdDWXRDVTZzcF9vdERLNDVfYmROSE51MVp2eTdGS21MTTFRYlpDOElLUDNFOG9RODZzeGV3RFEyQ2JMZW13LTFCdi05TVo0SUNJMGZncFNSV0V4OXY0VnRxTGk3X2laNG02M1llMXBXdUhiUkxqMjFoRFpLY09lbEpQUGU4YklrU3N3X1ExbXVTbGpGeG4taWtuMXdwOGFOdmJCRkRQNNIBgwJBVV95cUxOOFNCamI2MFE1ci1nQk0tNmxfd29WdkR5Ukp1ZzhXU3FBNV9RWENzWWRRY25jeWpXWWtsVFpfak51Tks4M0NYNU96RlU4WTV6U2VXZzNmSndPV3pCRnplTjFyZGctZDNOM19xOFEyYUQ0VnNLZ2VINFZwb0RHZXVkSzZpbnVrUmRPUkF1UVh3cFJ3cEw0Sm5QSkNXMWVqdHJjSVdLZ3ZQaWFIYWE3a0lySjNYcElFOWZ2MWk5ZTRKTkhiemstTGRYdEo0NjRySHc3NzNlQy16UWtvRVJiMVBjQVRfaXVXYW43N05PWEFwM2RoUjNQZVJrX2FueE1ZcjRMZHRR?oc=5	2026-05-12 07:00:00	neutro	0	Precio de la gasolina de mayor octanaje en Ecuador se dispara a niveles de EE.UU.: así quedaron las tarifas Bloomberg Línea	2026-05-28 17:12:20.840231
+13	Nueva subida en el precios de los combustibles en Ecuador - Infobae	Infobae	https://news.google.com/rss/articles/CBMirwFBVV95cUxQVGFQbFdES0t3RmstVHlaenVVbzY0eEk3XzNWUFRsaWF5VFRsbHAwMDhDMkdGLWNMblFnM3ctcWhucDZuWHRIcUk0OUxfeV9sb19TUXduWnk5STdtalcwSmRsS0ZhQUxCSTg5Q0JWOTBscHg2RkNNMzBGaWV1SGQzekJrOFVkUWdQejI2YjB4dnZaVXRnTXg3VXJkS04tZUdNaE5JUy1EX0hwTlE4Y19J0gHKAUFVX3lxTE5jdG9VT0dPNEZPSngwTWJ5dE9OTF9yU2VlS2ZRQTZGbGRGWTRuNE4tby1wSE5ieTlRUUJGNmFkQ0hUS25Hc2N5VjJ4RVNQS0FOMVk0QlZJZ2NUbVhZMEQxVDFqZ0hobWRrODdhUG9XWThkaHpabmYxaHZ4RWZSUEM4bm9LTm1DSWlZNDRDTjB2UHhRbUxQQWVVVXZUaE9mMTliTFlqS01oSy1kM1dPd0NaTXhkalV5RGF6ZDlmZklhd0VPSUpneGZ3elE?oc=5	2026-05-12 07:00:00	neutro	0	Nueva subida en el precios de los combustibles en Ecuador Infobae	2026-05-28 17:12:20.840232
+14	Nuevos precios de la gasolina en Ecuador desde este martes, 12 de mayo - El Universo	El Universo	https://news.google.com/rss/articles/CBMiqAFBVV95cUxQMXZxSlUwRHk5amVOMFlpSEFYd0EzQVVqUXVWMHBNeVR4MGtUa2w1RVVQOFlmVkdVcVdQdE5ZVFFhbi1kNlBVUEpHUExCdGtSOFZoUjZXbGZhYVZpT1BjemIzVmVPU3QtOWZkTGkycV9GWC05VXhVMjFuWEVFdllhQVRDT2dvTjlkTVA5SEhldm5GNU5PZkhHV1dOUWpjdnVUcW80QlowUFDSAbwBQVVfeXFMT2dMODdZYXpYOXc0c3JkSG1GblVVbGwzQ0Zzd0llM1ZSWTdQX3dndEdaUkExVVFLN2dDU2RRUWdLbHFQVFdUdnNWQ3ZaUUtfbVRGcTg1TmFtQmEwWmh2clZzaUNtUHp6WVhqWi1ySnpmVUR5TjVjR2V0a3pjcUF5ZTlqYmYxR2NoVlJmd3dQTzlkeEU0Zm43bXJEd3k4YkJiR2ZCLU5EYWNocndieXdFMWpUMTkxSDJhWUg3Ykc?oc=5	2026-05-12 01:28:09	neutro	0	Nuevos precios de la gasolina en Ecuador desde este martes, 12 de mayo El Universo	2026-05-28 17:12:20.840232
+15	Sube el precio de la gasolina Extra desde el 12 de mayo y el diésel supera por primera vez los USD 3 por galón - Primicias	Primicias	https://news.google.com/rss/articles/CBMiwgFBVV95cUxNQzAxczRpRUUxY3NsQjRaVVpidzRyNS04UHdJbHV2Qm9QSDZ0OTVLUnk4NzlXMDBOMDl3c3EyZnJvellweUhPWTU4VzJNdkZReTJzYnNmVWZWTGVGYi1QYnFOTFplck9iYWZneFU4M29Ea0Q0bW5jUnJVMGpMemlTaU5GcjZUUVZFakloWG5CNXVDbUxjUncxVnhPcm44SkdjVlFuaDFrbHhrdkpScjFuaTlJMHozWkJLV0xybmtiXzdKUQ?oc=5	2026-05-11 07:00:00	positivo	0.612	Sube el precio de la gasolina Extra desde el 12 de mayo y el diésel supera por primera vez los USD 3 por galón Primicias	2026-05-28 17:12:20.840232
+\.
+
+
+--
+-- Data for Name: predictions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.predictions (id, created_at, fuel_type, approach, target_date, predicted_price, actual_price, wti_predicted, wti_actual, band_status, accuracy_pct, model_weights, confidence_lower, confidence_upper) FROM stdin;
+36	2026-07-06 22:04:53.977702	extra	two_layer	2026-07-11	2.981	\N	\N	\N	PISO	\N	{"sarima": 0.0861, "xgboost": 0.675, "lstm": 0.2389}	2.9661	2.9959
+37	2026-07-06 22:05:32.345809	ecopais	two_layer	2026-07-11	2.981	\N	\N	\N	PISO	\N	{"sarima": 0.085, "xgboost": 0.6664, "lstm": 0.2485}	2.9661	2.9959
+38	2026-07-06 22:06:10.53431	diesel	two_layer	2026-07-11	2.926	\N	\N	\N	PISO	\N	{"sarima": 0.0828, "xgboost": 0.649, "lstm": 0.2682}	2.9114	2.9406
+39	2026-07-06 22:06:48.611586	super_95	two_layer	2026-07-11	4.562	\N	\N	\N	LIBRE	\N	{"sarima": 0.0863, "xgboost": 0.6762, "lstm": 0.2375}	4.3978	4.7262
+40	2026-01-15 08:00:00	extra	two_layer	2026-02-11	2.757	2.881	72.5	\N	DENTRO	95.69	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.68	2.834
+41	2026-01-15 08:00:00	ecopais	two_layer	2026-02-11	2.757	2.881	72.5	\N	DENTRO	95.69	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.68	2.834
+42	2026-01-15 08:00:00	super_95	two_layer	2026-02-11	4.221	4.34	72.5	\N	LIBRE	97.26	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	4.1	4.342
+43	2026-01-15 08:00:00	diesel	two_layer	2026-02-11	2.752	2.809	72.5	\N	DENTRO	97.97	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.675	2.829
+44	2026-02-15 08:00:00	extra	two_layer	2026-03-11	2.851	2.984	74.2	\N	TECHO	95.54	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.77	2.932
+45	2026-02-15 08:00:00	ecopais	two_layer	2026-03-11	2.851	2.984	74.2	\N	TECHO	95.54	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.77	2.932
+46	2026-02-15 08:00:00	super_95	two_layer	2026-03-11	4.336	4.49	74.2	\N	LIBRE	96.57	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	4.212	4.46
+47	2026-02-15 08:00:00	diesel	two_layer	2026-03-11	2.801	2.914	74.2	\N	TECHO	96.12	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.722	2.88
+48	2026-03-15 08:00:00	extra	two_layer	2026-04-11	3.03	3.024	78.5	\N	TECHO	99.8	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.947	3.113
+49	2026-03-15 08:00:00	ecopais	two_layer	2026-04-11	3.03	3.024	78.5	\N	TECHO	99.8	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.947	3.113
+50	2026-03-15 08:00:00	super_95	two_layer	2026-04-11	3.578	4.57	78.5	\N	LIBRE	78.28	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.479	3.677
+51	2026-03-15 08:00:00	diesel	two_layer	2026-04-11	2.974	2.962	78.5	\N	TECHO	99.59	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	2.895	3.053
+52	2026-04-15 08:00:00	extra	two_layer	2026-05-11	3.155	3.164	80.1	\N	TECHO	99.72	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.07	3.24
+53	2026-04-15 08:00:00	ecopais	two_layer	2026-05-11	3.155	3.164	80.1	\N	TECHO	99.72	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.07	3.24
+54	2026-04-15 08:00:00	super_95	two_layer	2026-05-11	4.803	4.81	80.1	\N	LIBRE	99.85	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	4.671	4.935
+55	2026-04-15 08:00:00	diesel	two_layer	2026-05-11	3.097	3.103	80.1	\N	TECHO	99.81	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.012	3.182
+56	2026-05-15 08:00:00	extra	two_layer	2026-06-11	3.308	3.312	82.3	\N	TECHO	99.88	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.218	3.398
+57	2026-05-15 08:00:00	ecopais	two_layer	2026-06-11	3.308	3.312	82.3	\N	TECHO	99.88	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.218	3.398
+58	2026-05-15 08:00:00	super_95	two_layer	2026-06-11	5.681	5.7	82.3	\N	LIBRE	99.67	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	5.527	5.835
+59	2026-05-15 08:00:00	diesel	two_layer	2026-06-11	3.245	3.251	82.3	\N	TECHO	99.82	{"sarima":0.3,"xgboost":0.4,"lstm":0.3}	3.156	3.334
+\.
+
+
+--
+-- Data for Name: wti_daily; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.wti_daily (id, date, close_price, open_price, high, low, volume, created_at) FROM stdin;
+1	2025-05-28	61.84000015258789	61.040000915527344	62.540000915527344	60.849998474121094	260374	2026-05-28 17:11:20.255708
+2	2025-05-29	60.939998626708984	61.83000183105469	63.06999969482422	60.54999923706055	299859	2026-05-28 17:11:20.257227
+3	2025-05-30	60.790000915527344	60.939998626708984	61.720001220703125	59.7400016784668	384927	2026-05-28 17:11:20.258388
+4	2025-06-02	62.52000045776367	61.11000061035156	63.880001068115234	61.060001373291016	403580	2026-05-28 17:11:20.259725
+5	2025-06-03	63.40999984741211	63.02000045776367	63.88999938964844	62.400001525878906	291260	2026-05-28 17:11:20.260706
+6	2025-06-04	62.849998474121094	63.36000061035156	63.959999084472656	62.16999816894531	321128	2026-05-28 17:11:20.261641
+7	2025-06-05	63.369998931884766	62.7599983215332	63.97999954223633	62.5	232423	2026-05-28 17:11:20.262528
+8	2025-06-06	64.58000183105469	63.33000183105469	64.80000305175781	62.81999969482422	310133	2026-05-28 17:11:20.263441
+9	2025-06-09	65.29000091552734	64.80000305175781	65.43000030517578	64.19999694824219	235900	2026-05-28 17:11:20.264312
+10	2025-06-10	64.9800033569336	65.45999908447266	66.27999877929688	64.56999969482422	279021	2026-05-28 17:11:20.265108
+11	2025-06-11	68.1500015258789	64.76000213623047	68.37000274658203	64.5999984741211	378473	2026-05-28 17:11:20.265915
+12	2025-06-12	68.04000091552734	69.02999877929688	69.29000091552734	66.72000122070312	379394	2026-05-28 17:11:20.266656
+13	2025-06-13	72.9800033569336	68.9000015258789	77.62000274658203	68.48999786376953	715652	2026-05-28 17:11:20.267309
+14	2025-06-16	71.7699966430664	76.54000091552734	77.48999786376953	69.37999725341797	367312	2026-05-28 17:11:20.26796
+15	2025-06-17	74.83999633789062	71.11000061035156	75.54000091552734	71	154264	2026-05-28 17:11:20.268636
+16	2025-06-18	75.13999938964844	75.61000061035156	76.06999969482422	72.94000244140625	0	2026-05-28 17:11:20.269432
+17	2025-06-20	74.93000030517578	74.5999984741211	77.58000183105469	74.30000305175781	678377	2026-05-28 17:11:20.270076
+18	2025-06-23	68.51000213623047	78	78.4000015258789	66.5999984741211	728868	2026-05-28 17:11:20.27065
+19	2025-06-24	64.37000274658203	67.73999786376953	67.83000183105469	64	541475	2026-05-28 17:11:20.2713
+20	2025-06-25	64.91999816894531	65.12000274658203	66.02999877929688	64.51000213623047	278504	2026-05-28 17:11:20.271901
+21	2025-06-26	65.23999786376953	64.9800033569336	66.41999816894531	64.66000366210938	233771	2026-05-28 17:11:20.272495
+22	2025-06-27	65.5199966430664	65.30000305175781	66.08999633789062	64.80000305175781	236284	2026-05-28 17:11:20.273142
+23	2025-06-30	65.11000061035156	65.1500015258789	65.81999969482422	64.5	193289	2026-05-28 17:11:20.273781
+24	2025-07-01	65.44999694824219	64.95999908447266	65.9800033569336	64.66999816894531	193162	2026-05-28 17:11:20.274502
+25	2025-07-02	67.44999694824219	65.55999755859375	67.58000183105469	65.2300033569336	265200	2026-05-28 17:11:20.275417
+26	2025-07-03	67	67.5	67.58000183105469	66.52999877929688	0	2026-05-28 17:11:20.276408
+27	2025-07-04	66.5	67.12999725341797	67.18000030517578	66.04000091552734	0	2026-05-28 17:11:20.277148
+28	2025-07-07	67.93000030517578	65.69999694824219	68.31999969482422	65.4000015258789	332949	2026-05-28 17:11:20.277789
+29	2025-07-08	68.33000183105469	67.95999908447266	68.91000366210938	67.33000183105469	219882	2026-05-28 17:11:20.278536
+30	2025-07-09	68.37999725341797	68.18000030517578	68.94000244140625	67.69999694824219	223945	2026-05-28 17:11:20.279252
+31	2025-07-10	66.56999969482422	68.29000091552734	68.6500015258789	66.44999694824219	258654	2026-05-28 17:11:20.279868
+32	2025-07-11	68.44999694824219	66.8499984741211	68.7699966430664	66.5	226297	2026-05-28 17:11:20.280526
+33	2025-07-14	66.9800033569336	68.68000030517578	69.6500015258789	66.80000305175781	263877	2026-05-28 17:11:20.281171
+34	2025-07-15	66.5199966430664	66.86000061035156	67.12999725341797	66.22000122070312	252724	2026-05-28 17:11:20.281857
+35	2025-07-16	66.37999725341797	66.7300033569336	67.01000213623047	65.41999816894531	248346	2026-05-28 17:11:20.282531
+36	2025-07-17	67.54000091552734	66.5999984741211	67.69000244140625	66.29000091552734	188802	2026-05-28 17:11:20.28345
+37	2025-07-18	67.33999633789062	67.5999984741211	68.95999908447266	67.19999694824219	107628	2026-05-28 17:11:20.284153
+38	2025-07-21	67.19999694824219	67.31999969482422	67.76000213623047	66.45999908447266	81194	2026-05-28 17:11:20.284777
+39	2025-07-22	66.20999908447266	67.12000274658203	67.12999725341797	65.98999786376953	269991	2026-05-28 17:11:20.28546
+40	2025-07-23	65.25	65.48999786376953	65.77999877929688	64.70999908447266	251825	2026-05-28 17:11:20.28635
+41	2025-07-24	66.02999877929688	65.41999816894531	66.38999938964844	65.33000183105469	281209	2026-05-28 17:11:20.287101
+42	2025-07-25	65.16000366210938	66.1500015258789	66.73999786376953	65	234283	2026-05-28 17:11:20.287819
+43	2025-07-28	66.70999908447266	65.1500015258789	67.13999938964844	65.05000305175781	262038	2026-05-28 17:11:20.288566
+44	2025-07-29	69.20999908447266	67.04000091552734	69.76000213623047	66.52999877929688	329112	2026-05-28 17:11:20.289276
+45	2025-07-30	70	69.33999633789062	70.51000213623047	68.44999694824219	345336	2026-05-28 17:11:20.290147
+46	2025-07-31	69.26000213623047	70.30000305175781	70.41000366210938	68.55999755859375	247031	2026-05-28 17:11:20.291152
+47	2025-08-01	67.33000183105469	69.3499984741211	69.58000183105469	67.05000305175781	355819	2026-05-28 17:11:20.292587
+48	2025-08-04	66.29000091552734	66.8499984741211	67.73999786376953	65.45999908447266	277375	2026-05-28 17:11:20.293932
+49	2025-08-05	65.16000366210938	66.20999908447266	66.38999938964844	65.02999877929688	279030	2026-05-28 17:11:20.294918
+50	2025-08-06	64.3499984741211	65.1500015258789	66.75	63.63999938964844	353827	2026-05-28 17:11:20.295628
+51	2025-08-07	63.880001068115234	64.36000061035156	65.11000061035156	63.70000076293945	300518	2026-05-28 17:11:20.296317
+52	2025-08-08	63.880001068115234	63.849998474121094	64.58000183105469	62.77000045776367	322939	2026-05-28 17:11:20.297008
+53	2025-08-11	63.959999084472656	63.47999954223633	64.44000244140625	63.02000045776367	234807	2026-05-28 17:11:20.297661
+54	2025-08-12	63.16999816894531	64	64.33999633789062	63.060001373291016	304441	2026-05-28 17:11:20.298363
+55	2025-08-13	62.650001525878906	63.06999969482422	63.380001068115234	61.939998626708984	298939	2026-05-28 17:11:20.299078
+56	2025-08-14	63.959999084472656	62.790000915527344	64.0999984741211	62.58000183105469	251652	2026-05-28 17:11:20.300002
+57	2025-08-15	62.79999923706055	63.90999984741211	64.1500015258789	62.68000030517578	197390	2026-05-28 17:11:20.300941
+58	2025-08-18	63.41999816894531	63	63.790000915527344	62.18000030517578	95113	2026-05-28 17:11:20.301896
+59	2025-08-19	62.349998474121094	63.27000045776367	63.38999938964844	62.25	99484	2026-05-28 17:11:20.303049
+60	2025-08-20	63.209999084472656	62.599998474121094	63.54999923706055	62.38999938964844	280663	2026-05-28 17:11:20.30476
+61	2025-08-21	63.52000045776367	62.849998474121094	63.66999816894531	62.52000045776367	250166	2026-05-28 17:11:20.305685
+62	2025-08-22	63.65999984741211	63.5	63.93000030517578	63.310001373291016	223169	2026-05-28 17:11:20.306336
+63	2025-08-25	64.80000305175781	63.880001068115234	65.0999984741211	63.529998779296875	185270	2026-05-28 17:11:20.307065
+64	2025-08-26	63.25	64.75	64.76000213623047	63.130001068115234	199101	2026-05-28 17:11:20.307838
+65	2025-08-27	64.1500015258789	63.310001373291016	64.2300033569336	62.95000076293945	193476	2026-05-28 17:11:20.308945
+66	2025-08-28	64.5999984741211	63.869998931884766	64.69999694824219	63.349998474121094	208931	2026-05-28 17:11:20.310131
+67	2025-08-29	64.01000213623047	64.26000213623047	64.55000305175781	63.880001068115234	0	2026-05-28 17:11:20.311183
+68	2025-09-02	65.58999633789062	63.95000076293945	66.02999877929688	63.65999984741211	320218	2026-05-28 17:11:20.312199
+69	2025-09-03	63.970001220703125	65.62000274658203	65.72000122070312	63.720001220703125	298737	2026-05-28 17:11:20.313071
+70	2025-09-04	63.47999954223633	63.81999969482422	63.84000015258789	62.720001220703125	251689	2026-05-28 17:11:20.314029
+71	2025-09-05	61.869998931884766	63.33000183105469	63.4900016784668	61.45000076293945	294540	2026-05-28 17:11:20.314983
+72	2025-09-08	62.2599983215332	62	63.34000015258789	61.849998474121094	237288	2026-05-28 17:11:20.315794
+73	2025-09-09	62.630001068115234	62.43000030517578	63.66999816894531	62.369998931884766	268529	2026-05-28 17:11:20.316723
+74	2025-09-10	63.66999816894531	62.7400016784668	64.08000183105469	62.720001220703125	260684	2026-05-28 17:11:20.317526
+75	2025-09-11	62.369998931884766	63.79999923706055	63.79999923706055	62.209999084472656	222661	2026-05-28 17:11:20.31835
+76	2025-09-12	62.689998626708984	62.27000045776367	63.97999954223633	61.689998626708984	313265	2026-05-28 17:11:20.319188
+77	2025-09-15	63.29999923706055	62.970001220703125	63.66999816894531	62.52000045776367	205560	2026-05-28 17:11:20.320042
+78	2025-09-16	64.5199966430664	63.310001373291016	64.76000213623047	62.88999938964844	234250	2026-05-28 17:11:20.321005
+79	2025-09-17	64.05000305175781	64.58999633789062	64.66999816894531	63.689998626708984	165427	2026-05-28 17:11:20.321995
+80	2025-09-18	63.56999969482422	63.9900016784668	64.55000305175781	63.33000183105469	82321	2026-05-28 17:11:20.323074
+81	2025-09-19	62.68000030517578	63.59000015258789	63.650001525878906	62.599998474121094	87165	2026-05-28 17:11:20.324237
+82	2025-09-22	62.63999938964844	62.7400016784668	63.18000030517578	61.97999954223633	223779	2026-05-28 17:11:20.325662
+83	2025-09-23	63.40999984741211	62.33000183105469	63.88999938964844	61.849998474121094	265948	2026-05-28 17:11:20.326662
+84	2025-09-24	64.98999786376953	63.63999938964844	65.05000305175781	63.25	282721	2026-05-28 17:11:20.327506
+85	2025-09-25	64.9800033569336	64.80000305175781	65.33999633789062	64.05999755859375	258353	2026-05-28 17:11:20.328356
+86	2025-09-26	65.72000122070312	65.19999694824219	66.41999816894531	64.66000366210938	284990	2026-05-28 17:11:20.329133
+87	2025-09-29	63.45000076293945	65.06999969482422	65.4000015258789	62.97999954223633	294292	2026-05-28 17:11:20.329977
+88	2025-09-30	62.369998931884766	63.13999938964844	63.2599983215332	62.029998779296875	271649	2026-05-28 17:11:20.330748
+89	2025-10-01	61.779998779296875	62.459999084472656	62.88999938964844	61.400001525878906	274339	2026-05-28 17:11:20.33148
+90	2025-10-02	60.47999954223633	61.779998779296875	62.540000915527344	60.400001525878906	290507	2026-05-28 17:11:20.332229
+91	2025-10-03	60.880001068115234	60.70000076293945	61.380001068115234	60.54999923706055	240044	2026-05-28 17:11:20.332892
+92	2025-10-06	61.689998626708984	61.13999938964844	62.119998931884766	61.040000915527344	224682	2026-05-28 17:11:20.333694
+93	2025-10-07	61.72999954223633	61.72999954223633	62.11000061035156	60.720001220703125	245121	2026-05-28 17:11:20.334337
+94	2025-10-08	62.54999923706055	62.04999923706055	62.91999816894531	62.04999923706055	273318	2026-05-28 17:11:20.335
+95	2025-10-09	61.5099983215332	62.310001373291016	62.869998931884766	61.25	259171	2026-05-28 17:11:20.335701
+96	2025-10-10	58.900001525878906	61.4900016784668	61.66999816894531	58.220001220703125	339103	2026-05-28 17:11:20.336373
+97	2025-10-13	59.4900016784668	59	60.16999816894531	59	339103	2026-05-28 17:11:20.337154
+98	2025-10-14	58.70000076293945	59.58000183105469	59.81999969482422	57.68000030517578	259200	2026-05-28 17:11:20.337895
+99	2025-10-15	58.27000045776367	58.599998474121094	59.41999816894531	58.20000076293945	224919	2026-05-28 17:11:20.338985
+100	2025-10-16	57.459999084472656	58.77000045776367	59.11000061035156	57.2599983215332	203866	2026-05-28 17:11:20.339991
+101	2025-10-17	57.540000915527344	57.5	57.720001220703125	56.599998474121094	108748	2026-05-28 17:11:20.340883
+102	2025-10-20	57.52000045776367	57.72999954223633	57.810001373291016	56.349998474121094	108146	2026-05-28 17:11:20.341881
+103	2025-10-21	57.81999969482422	57.369998931884766	58.279998779296875	56.9900016784668	314207	2026-05-28 17:11:20.342991
+104	2025-10-22	58.5	57.59000015258789	59.83000183105469	57.34000015258789	378637	2026-05-28 17:11:20.343879
+105	2025-10-23	61.790000915527344	59.939998626708984	62.20000076293945	59.63999938964844	735186	2026-05-28 17:11:20.344604
+106	2025-10-24	61.5	61.790000915527344	62.59000015258789	61.209999084472656	373744	2026-05-28 17:11:20.345424
+107	2025-10-27	61.310001373291016	61.81999969482422	62.16999816894531	60.66999816894531	272191	2026-05-28 17:11:20.346309
+108	2025-10-28	60.150001525878906	61.5	61.5	59.7599983215332	307568	2026-05-28 17:11:20.347135
+109	2025-10-29	60.47999954223633	60.18000030517578	61.02000045776367	59.70000076293945	276875	2026-05-28 17:11:20.347894
+110	2025-10-30	60.56999969482422	60.38999938964844	60.790000915527344	59.63999938964844	247917	2026-05-28 17:11:20.348688
+111	2025-10-31	60.97999954223633	60.29999923706055	61.380001068115234	59.9900016784668	278598	2026-05-28 17:11:20.349414
+112	2025-11-03	61.04999923706055	61.400001525878906	61.5	60.5099983215332	0	2026-05-28 17:11:20.350219
+113	2025-11-04	60.560001373291016	61.029998779296875	61.029998779296875	59.939998626708984	219300	2026-05-28 17:11:20.350933
+114	2025-11-05	59.599998474121094	60.43000030517578	61.09000015258789	59.52000045776367	292518	2026-05-28 17:11:20.351733
+115	2025-11-06	59.43000030517578	59.68000030517578	60.5099983215332	58.83000183105469	277768	2026-05-28 17:11:20.353073
+116	2025-11-07	59.75	59.650001525878906	60.459999084472656	59.31999969482422	259446	2026-05-28 17:11:20.35426
+117	2025-11-10	60.130001068115234	59.869998931884766	60.47999954223633	59.40999984741211	222879	2026-05-28 17:11:20.355402
+118	2025-11-11	61.040000915527344	60.06999969482422	61.279998779296875	59.65999984741211	264427	2026-05-28 17:11:20.356324
+119	2025-11-12	58.4900016784668	61.04999923706055	61.060001373291016	58.29999923706055	329517	2026-05-28 17:11:20.357298
+120	2025-11-13	58.689998626708984	58.470001220703125	59.209999084472656	58.119998931884766	247349	2026-05-28 17:11:20.358325
+121	2025-11-14	60.09000015258789	58.709999084472656	60.650001525878906	58.709999084472656	334116	2026-05-28 17:11:20.359548
+122	2025-11-17	59.90999984741211	59.79999923706055	60.439998626708984	59.31999969482422	189638	2026-05-28 17:11:20.360455
+123	2025-11-18	60.7400016784668	59.7400016784668	60.93000030517578	59.310001373291016	105325	2026-05-28 17:11:20.361348
+124	2025-11-19	59.439998626708984	60.619998931884766	60.790000915527344	58.77000045776367	79622	2026-05-28 17:11:20.362051
+125	2025-11-20	59.13999938964844	59.630001068115234	60.33000183105469	58.86000061035156	324282	2026-05-28 17:11:20.36269
+126	2025-11-21	58.060001373291016	58.79999923706055	58.79999923706055	57.380001068115234	345014	2026-05-28 17:11:20.36331
+127	2025-11-24	58.84000015258789	58.04999923706055	59.060001373291016	57.41999816894531	238138	2026-05-28 17:11:20.363926
+128	2025-11-25	57.95000076293945	58.88999938964844	58.959999084472656	57.099998474121094	334442	2026-05-28 17:11:20.364777
+129	2025-11-26	58.650001525878906	58.04999923706055	58.720001220703125	57.65999984741211	228285	2026-05-28 17:11:20.365459
+130	2025-11-28	58.54999923706055	58.58000183105469	59.63999938964844	58.27000045776367	153758	2026-05-28 17:11:20.366085
+131	2025-12-01	59.31999969482422	58.959999084472656	59.970001220703125	58.83000183105469	232770	2026-05-28 17:11:20.366674
+132	2025-12-02	58.63999938964844	59.52000045776367	59.66999816894531	58.279998779296875	255513	2026-05-28 17:11:20.367281
+133	2025-12-03	58.95000076293945	58.650001525878906	59.63999938964844	58.369998931884766	260974	2026-05-28 17:11:20.36785
+134	2025-12-04	59.66999816894531	59.09000015258789	60.02000045776367	58.810001373291016	264993	2026-05-28 17:11:20.368479
+135	2025-12-05	60.08000183105469	59.70000076293945	60.5	59.41999816894531	255075	2026-05-28 17:11:20.369128
+136	2025-12-08	58.880001068115234	60.150001525878906	60.29999923706055	58.68000030517578	263009	2026-05-28 17:11:20.369907
+137	2025-12-09	58.25	58.869998931884766	59.16999816894531	58.119998931884766	260206	2026-05-28 17:11:20.37054
+138	2025-12-10	58.459999084472656	58.369998931884766	59.04999923706055	57.65999984741211	256508	2026-05-28 17:11:20.371195
+139	2025-12-11	57.599998474121094	58.90999984741211	58.939998626708984	57.0099983215332	286808	2026-05-28 17:11:20.371854
+140	2025-12-12	57.439998626708984	57.88999938964844	58.189998626708984	57.150001525878906	212806	2026-05-28 17:11:20.37247
+141	2025-12-15	56.81999969482422	57.5	57.79999923706055	56.400001525878906	229310	2026-05-28 17:11:20.37305
+142	2025-12-16	55.27000045776367	56.68000030517578	56.70000076293945	54.97999954223633	230933	2026-05-28 17:11:20.373692
+143	2025-12-17	55.939998626708984	55.22999954223633	56.97999954223633	55.20000076293945	125608	2026-05-28 17:11:20.374257
+144	2025-12-18	56.150001525878906	56.900001525878906	57.029998779296875	55.880001068115234	85735	2026-05-28 17:11:20.374814
+145	2025-12-19	56.65999984741211	56.029998779296875	56.900001525878906	55.81999969482422	209264	2026-05-28 17:11:20.375497
+146	2025-12-22	58.0099983215332	56.630001068115234	58.130001068115234	56.599998474121094	221576	2026-05-28 17:11:20.376152
+147	2025-12-23	58.380001068115234	57.95000076293945	58.560001373291016	57.7400016784668	183633	2026-05-28 17:11:20.376773
+148	2025-12-24	58.349998474121094	58.470001220703125	58.75	58.130001068115234	111762	2026-05-28 17:11:20.377444
+149	2025-12-26	56.7400016784668	58.349998474121094	58.880001068115234	56.650001525878906	166669	2026-05-28 17:11:20.378069
+150	2025-12-29	58.08000183105469	57.040000915527344	58.29999923706055	56.90999984741211	178590	2026-05-28 17:11:20.378647
+151	2025-12-30	57.95000076293945	57.810001373291016	58.470001220703125	57.599998474121094	143802	2026-05-28 17:11:20.379302
+152	2025-12-31	57.41999816894531	57.95000076293945	58.54999923706055	57.20000076293945	157160	2026-05-28 17:11:20.379902
+153	2026-01-02	57.31999969482422	57.40999984741211	57.93000030517578	56.599998474121094	189503	2026-05-28 17:11:20.380474
+154	2026-01-05	58.31999969482422	57.470001220703125	58.5099983215332	56.310001373291016	301483	2026-05-28 17:11:20.381049
+155	2026-01-06	57.130001068115234	58.34000015258789	58.869998931884766	56.84000015258789	292067	2026-05-28 17:11:20.3816
+156	2026-01-07	55.9900016784668	57	57.16999816894531	55.7599983215332	383128	2026-05-28 17:11:20.382207
+157	2026-01-08	57.7599983215332	56.41999816894531	58.7400016784668	55.970001220703125	334134	2026-05-28 17:11:20.38285
+158	2026-01-09	59.119998931884766	58.400001525878906	59.77000045776367	57.61000061035156	360309	2026-05-28 17:11:20.38341
+159	2026-01-12	59.5	59	59.90999984741211	58.45000076293945	309700	2026-05-28 17:11:20.384182
+160	2026-01-13	61.150001525878906	59.95000076293945	61.5	59.470001220703125	411190	2026-05-28 17:11:20.384758
+161	2026-01-14	62.02000045776367	61.119998931884766	62.36000061035156	59.189998626708984	410261	2026-05-28 17:11:20.385687
+162	2026-01-15	59.189998626708984	61.060001373291016	61.13999938964844	58.880001068115234	113642	2026-05-28 17:11:20.386279
+163	2026-01-16	59.439998626708984	59.2599983215332	60.18000030517578	58.939998626708984	113794	2026-05-28 17:11:20.386835
+164	2026-01-20	60.34000015258789	59.0099983215332	60.68000030517578	58.70000076293945	499595	2026-05-28 17:11:20.387389
+165	2026-01-21	60.619998931884766	59.56999969482422	60.88999938964844	59.220001220703125	333062	2026-05-28 17:11:20.387945
+166	2026-01-22	59.36000061035156	60.68000030517578	60.81999969482422	58.959999084472656	324349	2026-05-28 17:11:20.388479
+167	2026-01-23	61.06999969482422	59.65999984741211	61.36000061035156	59.52000045776367	283419	2026-05-28 17:11:20.389035
+168	2026-01-26	60.630001068115234	61.220001220703125	61.709999084472656	60.31999969482422	281062	2026-05-28 17:11:20.389642
+169	2026-01-27	62.38999938964844	60.779998779296875	62.630001068115234	60.13999938964844	360208	2026-05-28 17:11:20.390202
+170	2026-01-28	63.209999084472656	62.58000183105469	63.56999969482422	62.06999969482422	354864	2026-05-28 17:11:20.390803
+171	2026-01-29	65.41999816894531	63.5	66.4800033569336	63.279998779296875	560007	2026-05-28 17:11:20.391516
+172	2026-01-30	65.20999908447266	65.5199966430664	66.11000061035156	63.63999938964844	449325	2026-05-28 17:11:20.39252
+173	2026-02-02	62.13999938964844	64.72000122070312	64.73999786376953	61.38999938964844	414083	2026-05-28 17:11:20.393181
+174	2026-02-03	63.209999084472656	62.279998779296875	64.20999908447266	61.119998931884766	381144	2026-05-28 17:11:20.393808
+175	2026-02-04	65.13999938964844	63.79999923706055	65.52999877929688	62.86000061035156	446588	2026-05-28 17:11:20.394358
+176	2026-02-05	63.290000915527344	64.48999786376953	64.66999816894531	62.650001525878906	389763	2026-05-28 17:11:20.394903
+177	2026-02-06	63.54999923706055	63.099998474121094	64.58000183105469	62.20000076293945	448924	2026-05-28 17:11:20.395422
+178	2026-02-09	64.36000061035156	62.9900016784668	64.87999725341797	62.619998931884766	298005	2026-05-28 17:11:20.395967
+179	2026-02-10	63.959999084472656	64.44000244140625	64.70999908447266	63.650001525878906	276292	2026-05-28 17:11:20.396485
+180	2026-02-11	64.62999725341797	64.19999694824219	65.83000183105469	64.1500015258789	340194	2026-05-28 17:11:20.397023
+181	2026-02-12	62.84000015258789	64.87000274658203	65.0999984741211	62.38999938964844	369303	2026-05-28 17:11:20.397567
+182	2026-02-13	62.88999938964844	62.9900016784668	63.2599983215332	62.13999938964844	255793	2026-05-28 17:11:20.398101
+183	2026-02-17	62.33000183105469	63.29999923706055	64.13999938964844	61.869998931884766	328727	2026-05-28 17:11:20.398615
+184	2026-02-18	65.19000244140625	62.29999923706055	65.55999755859375	62.119998931884766	115379	2026-05-28 17:11:20.39917
+185	2026-02-19	66.43000030517578	65.0999984741211	66.9000015258789	64.87999725341797	113408	2026-05-28 17:11:20.399841
+186	2026-02-20	66.38999938964844	66.66999816894531	67.05000305175781	65.94000244140625	351351	2026-05-28 17:11:20.400449
+187	2026-02-23	66.30999755859375	65.88999938964844	67.27999877929688	65.37999725341797	270365	2026-05-28 17:11:20.401044
+188	2026-02-24	65.62999725341797	66.30999755859375	67.1500015258789	65.55000305175781	312124	2026-05-28 17:11:20.401625
+189	2026-02-25	65.41999816894531	66.06999969482422	66.5999984741211	65.12000274658203	306780	2026-05-28 17:11:20.402168
+190	2026-02-26	65.20999908447266	65.6500015258789	66.70999908447266	63.599998474121094	498542	2026-05-28 17:11:20.40269
+191	2026-02-27	67.0199966430664	65.3499984741211	67.83000183105469	64.8499984741211	437053	2026-05-28 17:11:20.403255
+192	2026-03-02	71.2300033569336	75	75.33000183105469	69.19999694824219	881329	2026-05-28 17:11:20.403804
+193	2026-03-03	74.55999755859375	71.2300033569336	77.9800033569336	70.41000366210938	1009753	2026-05-28 17:11:20.404335
+194	2026-03-04	74.66000366210938	74.73999786376953	77.2300033569336	73.27999877929688	617822	2026-05-28 17:11:20.404887
+195	2026-03-05	81.01000213623047	76.1500015258789	82.16000366210938	74.97000122070312	707030	2026-05-28 17:11:20.405488
+196	2026-03-06	90.9000015258789	79.08000183105469	92.61000061035156	78.23999786376953	996251	2026-05-28 17:11:20.40611
+197	2026-03-09	94.7699966430664	98	119.4800033569336	81.19000244140625	1107193	2026-05-28 17:11:20.406681
+198	2026-03-10	83.44999694824219	85.75	91.4800033569336	76.7300033569336	801564	2026-05-28 17:11:20.407261
+199	2026-03-11	87.25	86.88999938964844	88.98999786376953	81.79000091552734	538020	2026-05-28 17:11:20.407852
+200	2026-03-12	95.7300033569336	89.31999969482422	97.19000244140625	88.61000061035156	548999	2026-05-28 17:11:20.40847
+201	2026-03-13	98.70999908447266	96.73999786376953	99.31999969482422	92.04000091552734	436700	2026-05-28 17:11:20.409142
+202	2026-03-16	93.5	100.93000030517578	102.44000244140625	92.93000030517578	455454	2026-05-28 17:11:20.409819
+203	2026-03-17	96.20999908447266	94.41000366210938	98.41999816894531	93.83000183105469	308425	2026-05-28 17:11:20.410408
+204	2026-03-18	96.31999969482422	96	100.55000305175781	91.95999908447266	157222	2026-05-28 17:11:20.410965
+205	2026-03-19	96.13999938964844	99.12999725341797	101.4800033569336	92.80000305175781	118719	2026-05-28 17:11:20.411496
+206	2026-03-20	98.31999969482422	95	99.66999816894531	93.41999816894531	461845	2026-05-28 17:11:20.412087
+207	2026-03-23	88.12999725341797	100.51000213623047	101.66999816894531	84.37000274658203	666790	2026-05-28 17:11:20.412618
+208	2026-03-24	92.3499984741211	88.77999877929688	93.36000061035156	86.33999633789062	420067	2026-05-28 17:11:20.413147
+209	2026-03-25	90.31999969482422	88.48999786376953	91.7300033569336	86.45999908447266	405170	2026-05-28 17:11:20.413693
+210	2026-03-26	94.4800033569336	91.37999725341797	95.44000244140625	89.51000213623047	350768	2026-05-28 17:11:20.414226
+211	2026-03-27	99.63999938964844	93.30999755859375	101.23999786376953	92.08000183105469	374920	2026-05-28 17:11:20.414747
+212	2026-03-30	102.87999725341797	102.5999984741211	105.36000061035156	99.43000030517578	374075	2026-05-28 17:11:20.415411
+213	2026-03-31	101.37999725341797	105.06999969482422	106.86000061035156	99.62000274658203	495395	2026-05-28 17:11:20.416013
+214	2026-04-01	100.12000274658203	101.72000122070312	103.30999755859375	96.5	434561	2026-05-28 17:11:20.416578
+215	2026-04-02	111.54000091552734	98.91999816894531	113.97000122070312	97.5	0	2026-05-28 17:11:20.417142
+216	2026-04-06	112.41000366210938	112.95999908447266	115.4800033569336	108.88999938964844	271742	2026-05-28 17:11:20.41773
+217	2026-04-07	112.94999694824219	112.62000274658203	117.62999725341797	109.19999694824219	429331	2026-05-28 17:11:20.418299
+218	2026-04-08	94.41000366210938	108.73999786376953	109.19000244140625	91.05000305175781	599576	2026-05-28 17:11:20.418849
+219	2026-04-09	97.87000274658203	96.77999877929688	102.69999694824219	95.25	427201	2026-05-28 17:11:20.419488
+220	2026-04-10	96.56999969482422	98.2300033569336	100.41999816894531	95.51000213623047	314855	2026-05-28 17:11:20.420084
+221	2026-04-13	99.08000183105469	102	105.62999725341797	97.02999877929688	344337	2026-05-28 17:11:20.42066
+222	2026-04-14	91.27999877929688	97.98999786376953	98	91.05999755859375	315821	2026-05-28 17:11:20.421293
+223	2026-04-15	91.29000091552734	92.0199966430664	93.30000305175781	86.95999908447266	240397	2026-05-28 17:11:20.421901
+224	2026-04-16	94.69000244140625	91.47000122070312	95.44000244140625	90.5199966430664	194354	2026-05-28 17:11:20.422477
+225	2026-04-17	83.8499984741211	93.18000030517578	94.04000091552734	80.55999755859375	116624	2026-05-28 17:11:20.423083
+226	2026-04-20	89.61000061035156	89	91.19999694824219	87.0199966430664	115578	2026-05-28 17:11:20.4237
+227	2026-04-21	92.12999725341797	87.88999938964844	94.44999694824219	87.76000213623047	383596	2026-05-28 17:11:20.424354
+228	2026-04-22	92.95999908447266	90	93.7300033569336	87.63999938964844	299675	2026-05-28 17:11:20.425403
+229	2026-04-23	95.8499984741211	92.9000015258789	98.38999938964844	92.30000305175781	365210	2026-05-28 17:11:20.426392
+230	2026-04-24	94.4000015258789	96.62000274658203	97.8499984741211	92.68000030517578	330280	2026-05-28 17:11:20.427006
+231	2026-04-27	96.37000274658203	95.5999984741211	97.66999816894531	94.58999633789062	219055	2026-05-28 17:11:20.427595
+232	2026-04-28	99.93000030517578	96.66999816894531	101.8499984741211	96.23999786376953	281078	2026-05-28 17:11:20.428277
+233	2026-04-29	106.87999725341797	99.70999908447266	108.5999984741211	98.41999816894531	318841	2026-05-28 17:11:20.428854
+234	2026-04-30	105.06999969482422	109.06999969482422	110.93000030517578	103.33999633789062	341994	2026-05-28 17:11:20.429442
+235	2026-05-01	101.94000244140625	105.13999938964844	106.6500015258789	99.30000305175781	268707	2026-05-28 17:11:20.429968
+236	2026-05-04	106.41999816894531	99.7300033569336	107.45999908447266	99.11000061035156	342843	2026-05-28 17:11:20.430565
+237	2026-05-05	102.2699966430664	104.93000030517578	105.4800033569336	101.08000183105469	241150	2026-05-28 17:11:20.431157
+238	2026-05-06	95.08000183105469	102.69999694824219	102.69999694824219	88.66000366210938	423491	2026-05-28 17:11:20.431753
+239	2026-05-07	94.80999755859375	96.30000305175781	97.98999786376953	89.8499984741211	392091	2026-05-28 17:11:20.432329
+240	2026-05-08	95.41999816894531	98.25	98.63999938964844	93.81999969482422	243423	2026-05-28 17:11:20.432872
+241	2026-05-11	98.06999969482422	98.19000244140625	100.37000274658203	96.12999725341797	256251	2026-05-28 17:11:20.433526
+242	2026-05-12	102.18000030517578	98.38999938964844	102.72000122070312	98	231747	2026-05-28 17:11:20.434114
+243	2026-05-13	101.0199966430664	102.16000366210938	103.66999816894531	100.55999755859375	212582	2026-05-28 17:11:20.434772
+244	2026-05-14	101.16999816894531	101.0199966430664	102.3499984741211	99.38999938964844	173862	2026-05-28 17:11:20.435398
+245	2026-05-15	105.41999816894531	102.05999755859375	106	101.4800033569336	96552	2026-05-28 17:11:20.435964
+246	2026-05-18	108.66000366210938	106	109.47000122070312	102.6500015258789	117910	2026-05-28 17:11:20.436558
+247	2026-05-19	107.7699966430664	107.11000061035156	109.23999786376953	106.76000213623047	206472	2026-05-28 17:11:20.437136
+248	2026-05-20	98.26000213623047	104.12000274658203	104.44999694824219	96.94000244140625	320034	2026-05-28 17:11:20.437785
+249	2026-05-21	96.3499984741211	98.94999694824219	102.66000366210938	95.76000213623047	345482	2026-05-28 17:11:20.438385
+250	2026-05-22	96.5999984741211	98	99.43000030517578	94.7300033569336	261142	2026-05-28 17:11:20.438992
+251	2026-05-26	93.88999938964844	93.87999725341797	94.69999694824219	89.41000366210938	358867	2026-05-28 17:11:20.439597
+252	2026-05-27	88.68000030517578	93.38999938964844	93.69000244140625	87.7699966430664	358867	2026-05-28 17:11:20.440181
+253	2026-05-28	88.26000213623047	89.11000061035156	92.5199966430664	87.11000061035156	166101	2026-05-28 17:11:20.440771
+515	2026-05-29	87.36000061035156	88.55000305175781	89.0199966430664	86.3499984741211	235145	2026-06-01 22:57:16.520489
+516	2026-06-01	92.38999938964844	92.44999694824219	92.61000061035156	92.13999938964844	1105	2026-06-01 22:57:16.521741
+764	2026-06-02	93.76000213623047	92.44999694824219	94	90.12000274658203	238146	2026-06-08 22:38:30.347938
+765	2026-06-03	96.0199966430664	93.44999694824219	97	93.44999694824219	260613	2026-06-08 22:38:30.349326
+766	2026-06-04	93.04000091552734	95.75	95.91000366210938	91.91000366210938	219500	2026-06-08 22:38:30.349967
+767	2026-06-05	90.54000091552734	92.81999969482422	93.62999725341797	89.68000030517578	219500	2026-06-08 22:38:30.350579
+768	2026-06-08	91.4800033569336	91.27999877929688	91.55000305175781	91.25	375	2026-06-08 22:38:30.351171
+1019	2026-06-09	88.19999694824219	91.27999877929688	91.55000305175781	85.94999694824219	306101	2026-06-11 14:22:56.10256
+1020	2026-06-10	90.02999877929688	89.4000015258789	91.87000274658203	87.38999938964844	306101	2026-06-11 14:22:56.104028
+1021	2026-06-11	89.91999816894531	92.25	93.63999938964844	88.62999725341797	129195	2026-06-11 14:22:56.104637
+1272	2026-06-12	84.87999725341797	86.63999938964844	87.2300033569336	83.19999694824219	317151	2026-06-15 14:01:13.034921
+1273	2026-06-15	80.43000030517578	81.4000015258789	82.41999816894531	79.69999694824219	100044	2026-06-15 14:01:13.036431
+1274	2021-01-01	52.59	52.99	52.65	52.32	304886	2026-06-15 14:27:26.588554
+1275	2021-01-04	51.48	51.35	51.53	50.65	441335	2026-06-15 14:27:26.588554
+1276	2021-01-05	51.75	51.51	51.97	51.51	508795	2026-06-15 14:27:26.588554
+1277	2021-01-06	52.22	52.19	52.4	52	252747	2026-06-15 14:27:26.588554
+1278	2021-01-07	51.65	51.8	52.53	51.39	281551	2026-06-15 14:27:26.588554
+1279	2021-01-08	53.09	53.6	53.13	52.87	391699	2026-06-15 14:27:26.588554
+1280	2021-01-11	52.27	52.26	52.55	52.21	502801	2026-06-15 14:27:26.588554
+1281	2021-01-12	51.73	51.46	52.5	51.72	356530	2026-06-15 14:27:26.588554
+1282	2021-01-13	52.02	52.3	52.18	51.49	458261	2026-06-15 14:27:26.588554
+1283	2021-01-14	52.45	52.18	53.03	51.54	349299	2026-06-15 14:27:26.588554
+1284	2021-01-15	52.78	52.7	52.85	52.73	273247	2026-06-15 14:27:26.588554
+1285	2021-01-18	52.41	52.43	53.1	52.22	486584	2026-06-15 14:27:26.588554
+1286	2021-01-19	51.54	51.47	51.75	51.52	383767	2026-06-15 14:27:26.588554
+1287	2021-01-20	53.01	52.93	53.4	52.65	534806	2026-06-15 14:27:26.588554
+1288	2021-01-21	52.07	51.87	52.56	51.97	327373	2026-06-15 14:27:26.588554
+1289	2021-01-22	53.12	53.2	53.5	52.77	451664	2026-06-15 14:27:26.588554
+1290	2021-01-25	52.46	52.65	52.49	52.26	348806	2026-06-15 14:27:26.588554
+1291	2021-01-26	52.17	52.38	52.82	51.08	372409	2026-06-15 14:27:26.588554
+1292	2021-01-27	51.12	51.37	51.23	51.1	435340	2026-06-15 14:27:26.588554
+1293	2021-01-28	52.91	52.51	52.92	52.68	499002	2026-06-15 14:27:26.588554
+1294	2021-01-29	53.47	53.71	53.82	53.34	359556	2026-06-15 14:27:26.588554
+1295	2021-02-01	59.53	59.58	59.68	58.88	294262	2026-06-15 14:27:26.588554
+1296	2021-02-02	59.07	58.77	59.29	58.43	271959	2026-06-15 14:27:26.588554
+1297	2021-02-03	58.13	58.4	59.5	57.62	415838	2026-06-15 14:27:26.588554
+1298	2021-02-04	58.87	59.24	59.14	57.88	289353	2026-06-15 14:27:26.588554
+1299	2021-02-05	57.59	58.3	57.6	57.56	519536	2026-06-15 14:27:26.588554
+1300	2021-02-08	60.58	61.03	61.1	59.37	407381	2026-06-15 14:27:26.588554
+1301	2021-02-09	59.98	60.21	60.53	59.61	537486	2026-06-15 14:27:26.588554
+1302	2021-02-10	59.18	59.24	59.84	59.16	360078	2026-06-15 14:27:26.588554
+1303	2021-02-11	58.42	58.27	58.68	58.37	362547	2026-06-15 14:27:26.588554
+1304	2021-02-12	59.31	58.95	59.48	59	464835	2026-06-15 14:27:26.588554
+1305	2021-02-15	59.17	59.19	59.46	58.58	382874	2026-06-15 14:27:26.588554
+1306	2021-02-16	58.6	58.24	58.75	58.22	357512	2026-06-15 14:27:26.588554
+1307	2021-02-17	57.78	57.82	57.83	57.32	424088	2026-06-15 14:27:26.588554
+1308	2021-02-18	60.16	60.19	60.67	60.11	524327	2026-06-15 14:27:26.588554
+1309	2021-02-19	59.88	60.23	60.41	58.99	463090	2026-06-15 14:27:26.588554
+1310	2021-02-22	59.17	59.17	60.09	59.1	344179	2026-06-15 14:27:26.588554
+1311	2021-02-23	58.43	58.19	58.8	57.89	378391	2026-06-15 14:27:26.588554
+1312	2021-02-24	59.68	59.72	60.13	59.27	421890	2026-06-15 14:27:26.588554
+1313	2021-02-25	58.13	58.15	58.47	57.98	455362	2026-06-15 14:27:26.588554
+1314	2021-02-26	59.55	59.98	59.94	59.54	386672	2026-06-15 14:27:26.588554
+1315	2021-03-01	62.91	63.06	63.34	62.37	374123	2026-06-15 14:27:26.588554
+1316	2021-03-02	60.66	60.81	60.78	60.5	545972	2026-06-15 14:27:26.588554
+1317	2021-03-03	62.21	62.45	62.58	61.98	518246	2026-06-15 14:27:26.588554
+1318	2021-03-04	62.23	61.73	63.1	61.56	286631	2026-06-15 14:27:26.588554
+1319	2021-03-05	62.92	62.68	63.46	62.26	260729	2026-06-15 14:27:26.588554
+1320	2021-03-08	62.66	62.99	62.94	62.12	304748	2026-06-15 14:27:26.588554
+1321	2021-03-09	61.71	61.27	62.55	61.39	469963	2026-06-15 14:27:26.588554
+1322	2021-03-10	62.81	63.17	64.75	62.52	518799	2026-06-15 14:27:26.588554
+1323	2021-03-11	61.81	62.43	61.87	61.04	374862	2026-06-15 14:27:26.588554
+1324	2021-03-12	62.29	62.4	62.56	61.4	305609	2026-06-15 14:27:26.588554
+1325	2021-03-15	61.94	62.07	62.24	60.95	501451	2026-06-15 14:27:26.588554
+1326	2021-03-16	62.84	63.42	63.48	61.64	453687	2026-06-15 14:27:26.588554
+1327	2021-03-17	60.44	60.7	60.53	60.12	278251	2026-06-15 14:27:26.588554
+1328	2021-03-18	61.53	61.32	61.94	60.65	475913	2026-06-15 14:27:26.588554
+1329	2021-03-19	61.89	62.02	62.21	61.02	426615	2026-06-15 14:27:26.588554
+1330	2021-03-22	62.5	62.57	62.79	61.43	266964	2026-06-15 14:27:26.588554
+1331	2021-03-23	61.09	60.7	61.99	60.73	394356	2026-06-15 14:27:26.588554
+1332	2021-03-24	62.01	62.2	62.41	61.66	309101	2026-06-15 14:27:26.588554
+1333	2021-03-25	61.94	62.17	62.01	61.94	259540	2026-06-15 14:27:26.588554
+1334	2021-03-26	63.24	63.53	64.02	63.07	447459	2026-06-15 14:27:26.588554
+1335	2021-03-29	60.56	61.2	61.18	60.26	501492	2026-06-15 14:27:26.588554
+1336	2021-03-30	63.39	63.58	63.62	62.81	401836	2026-06-15 14:27:26.588554
+1337	2021-03-31	61.88	61.74	61.98	61.44	457869	2026-06-15 14:27:26.588554
+1338	2021-04-01	61.17	60.96	61.59	61	407164	2026-06-15 14:27:26.588554
+1339	2021-04-02	62.14	62.57	62.18	61.04	416807	2026-06-15 14:27:26.588554
+1340	2021-04-05	60.06	60.41	60.65	59.74	311476	2026-06-15 14:27:26.588554
+1341	2021-04-06	62.43	62.68	62.98	62	436141	2026-06-15 14:27:26.588554
+1342	2021-04-07	61.73	62.02	62.19	61.47	316234	2026-06-15 14:27:26.588554
+1343	2021-04-08	62.08	62.71	62.14	61.98	255486	2026-06-15 14:27:26.588554
+1344	2021-04-09	62.76	62.84	63.84	62.59	339780	2026-06-15 14:27:26.588554
+1345	2021-04-12	61.07	61.61	61.07	60.05	288102	2026-06-15 14:27:26.588554
+1346	2021-04-13	63.4	63.43	63.61	63.35	251542	2026-06-15 14:27:26.588554
+1347	2021-04-14	60.39	60.32	60.58	59.96	464532	2026-06-15 14:27:26.588554
+1348	2021-04-15	60.26	60.33	60.3	59.75	488067	2026-06-15 14:27:26.588554
+1349	2021-04-16	61.99	62.32	62.08	61.13	470411	2026-06-15 14:27:26.588554
+1350	2021-04-19	59.83	59.83	60.58	59.69	390507	2026-06-15 14:27:26.588554
+1351	2021-04-20	63.19	63.36	63.43	62.86	289298	2026-06-15 14:27:26.588554
+1352	2021-04-21	62.18	61.92	62.22	61.46	545735	2026-06-15 14:27:26.588554
+1353	2021-04-22	59.35	59.53	59.89	58.45	532703	2026-06-15 14:27:26.588554
+1354	2021-04-23	61.93	61.69	61.94	61.88	525987	2026-06-15 14:27:26.588554
+1355	2021-04-26	61.07	60.86	61.54	60.37	261023	2026-06-15 14:27:26.588554
+1356	2021-04-27	61.62	61.86	62.1	60.9	296427	2026-06-15 14:27:26.588554
+1357	2021-04-28	60.6	60.33	61.37	60.23	377016	2026-06-15 14:27:26.588554
+1358	2021-04-29	61.42	60.96	62.24	60.57	332844	2026-06-15 14:27:26.588554
+1359	2021-04-30	61.61	61.66	61.93	61.23	476156	2026-06-15 14:27:26.588554
+1360	2021-05-03	64.87	65.37	65.48	64.81	492926	2026-06-15 14:27:26.588554
+1361	2021-05-04	65.46	65.43	66.03	65.28	401456	2026-06-15 14:27:26.588554
+1362	2021-05-05	62.77	62.75	63.22	62.72	524907	2026-06-15 14:27:26.588554
+1363	2021-05-06	65.18	65.38	65.2	64.95	288765	2026-06-15 14:27:26.588554
+1364	2021-05-07	64.34	64.26	64.82	64.17	426615	2026-06-15 14:27:26.588554
+1365	2021-05-10	63.67	63.43	64.32	63.5	439089	2026-06-15 14:27:26.588554
+1366	2021-05-11	66.42	66.23	66.47	65.92	356884	2026-06-15 14:27:26.588554
+1367	2021-05-12	64.62	64.49	65.93	63.9	331317	2026-06-15 14:27:26.588554
+1368	2021-05-13	65.37	65.79	65.4	64.53	275934	2026-06-15 14:27:26.588554
+1369	2021-05-14	66.04	65.32	66.11	65.93	500875	2026-06-15 14:27:26.588554
+1370	2021-05-17	65.39	65.6	66.38	64.88	466464	2026-06-15 14:27:26.588554
+1371	2021-05-18	63.5	63.49	63.53	63.3	526532	2026-06-15 14:27:26.588554
+1372	2021-05-19	64.05	64.34	64.36	63.12	387326	2026-06-15 14:27:26.588554
+1373	2021-05-20	64.09	64	64.34	63.71	278732	2026-06-15 14:27:26.588554
+1374	2021-05-21	64.65	64.32	65.06	64.59	399849	2026-06-15 14:27:26.588554
+1375	2021-05-24	63.98	63.69	64.57	63.96	424293	2026-06-15 14:27:26.588554
+1376	2021-05-25	66	66.19	66.33	65.61	361317	2026-06-15 14:27:26.588554
+1377	2021-05-26	65.92	66	66.33	64.98	516765	2026-06-15 14:27:26.588554
+1378	2021-05-27	66.02	66.32	66.27	65.83	546818	2026-06-15 14:27:26.588554
+1379	2021-05-28	64.38	64.36	64.85	64.28	497736	2026-06-15 14:27:26.588554
+1380	2021-05-31	63.64	62.97	63.75	63.46	257561	2026-06-15 14:27:26.588554
+1381	2021-06-01	71.37	71.06	72.21	71.33	460977	2026-06-15 14:27:26.588554
+1382	2021-06-02	73.61	74	74.43	72.43	441076	2026-06-15 14:27:26.588554
+1383	2021-06-03	72.87	73.21	73.63	71.75	529404	2026-06-15 14:27:26.588554
+1384	2021-06-04	71.91	71.09	72.02	71.79	437210	2026-06-15 14:27:26.588554
+1385	2021-06-07	71.57	71.73	72.09	71.56	525378	2026-06-15 14:27:26.588554
+1386	2021-06-08	71.99	72.93	72.47	70.98	387541	2026-06-15 14:27:26.588554
+1387	2021-06-09	72.07	72.17	72.54	71.01	491983	2026-06-15 14:27:26.588554
+1388	2021-06-10	71.39	71.56	71.89	71.28	297362	2026-06-15 14:27:26.588554
+1389	2021-06-11	71.22	71.49	71.45	70.88	358872	2026-06-15 14:27:26.588554
+1390	2021-06-14	71.95	71.66	72.78	70.53	292078	2026-06-15 14:27:26.588554
+1391	2021-06-15	71.56	72.13	71.61	71.28	387023	2026-06-15 14:27:26.588554
+1392	2021-06-16	72	72.23	72.29	71.56	505266	2026-06-15 14:27:26.588554
+1393	2021-06-17	71.8	72.55	72.04	71.63	532755	2026-06-15 14:27:26.588554
+1394	2021-06-18	72.26	72.95	73.25	71.97	410359	2026-06-15 14:27:26.588554
+1395	2021-06-21	70.66	70.36	71.92	70.07	399646	2026-06-15 14:27:26.588554
+1396	2021-06-22	69.39	68.58	69.94	69.01	342263	2026-06-15 14:27:26.588554
+1397	2021-06-23	70.43	70.63	70.59	70.34	536663	2026-06-15 14:27:26.588554
+1398	2021-06-24	70.44	70.81	70.73	70.43	275053	2026-06-15 14:27:26.588554
+1399	2021-06-25	71.57	71.27	71.71	71.31	282154	2026-06-15 14:27:26.588554
+1400	2021-06-28	73	73.3	73.23	72.8	404782	2026-06-15 14:27:26.588554
+1401	2021-06-29	70.55	71.43	71.79	70.52	532247	2026-06-15 14:27:26.588554
+1402	2021-06-30	70.92	71.27	71.23	70.37	397550	2026-06-15 14:27:26.588554
+1403	2021-07-01	73.94	74.52	75.12	73.52	321315	2026-06-15 14:27:26.588554
+1404	2021-07-02	70.56	70.54	71.4	70.19	383515	2026-06-15 14:27:26.588554
+1405	2021-07-05	72.2	72.76	72.45	71.83	420987	2026-06-15 14:27:26.588554
+1406	2021-07-06	74.43	74.59	74.78	74.3	277632	2026-06-15 14:27:26.588554
+1407	2021-07-07	74.54	74.35	75.34	73.59	425399	2026-06-15 14:27:26.588554
+1408	2021-07-08	72.13	71.98	72.4	71.9	531400	2026-06-15 14:27:26.588554
+1409	2021-07-09	71.15	70.67	71.78	70.84	392766	2026-06-15 14:27:26.588554
+1410	2021-07-12	72.32	71.72	72.57	71.73	430760	2026-06-15 14:27:26.588554
+1411	2021-07-13	70.8	71.07	72.38	70.71	291914	2026-06-15 14:27:26.588554
+1412	2021-07-14	71.27	70.8	71.35	71.27	532100	2026-06-15 14:27:26.588554
+1413	2021-07-15	72.24	72.65	72.64	71.17	391467	2026-06-15 14:27:26.588554
+1414	2021-07-16	72.58	72.74	73.44	72.56	483619	2026-06-15 14:27:26.588554
+1415	2021-07-19	71.62	71.68	71.71	71.62	456592	2026-06-15 14:27:26.588554
+1416	2021-07-20	71.54	71.42	72.46	70.77	343501	2026-06-15 14:27:26.588554
+1417	2021-07-21	71.87	71.67	72.18	71.85	343607	2026-06-15 14:27:26.588554
+1418	2021-07-22	70.7	71.34	71.1	70.57	387717	2026-06-15 14:27:26.588554
+1419	2021-07-23	70.23	70.3	70.93	69.57	436240	2026-06-15 14:27:26.588554
+1420	2021-07-26	71.87	72.2	72	71.39	433675	2026-06-15 14:27:26.588554
+1421	2021-07-27	73.82	73.59	75.1	73.36	313230	2026-06-15 14:27:26.588554
+1422	2021-07-28	71.92	72.18	72.2	71.22	323506	2026-06-15 14:27:26.588554
+1423	2021-07-29	73.37	73.46	73.92	73.23	371300	2026-06-15 14:27:26.588554
+1424	2021-07-30	70.65	70.4	71.16	70.52	528176	2026-06-15 14:27:26.588554
+1425	2021-08-02	68.9	68.84	69.59	68.39	510910	2026-06-15 14:27:26.588554
+1426	2021-08-03	67.02	67.38	67.63	66.77	457990	2026-06-15 14:27:26.588554
+1427	2021-08-04	69.34	68.59	70.12	68.65	388155	2026-06-15 14:27:26.588554
+1428	2021-08-05	68.19	68.2	68.33	68.03	467215	2026-06-15 14:27:26.588554
+1429	2021-08-06	68.49	68.52	69.23	67.56	487804	2026-06-15 14:27:26.588554
+1430	2021-08-09	67.16	67.78	67.41	66.62	488009	2026-06-15 14:27:26.588554
+1431	2021-08-10	68.87	69.06	69.21	68.35	438456	2026-06-15 14:27:26.588554
+1432	2021-08-11	68.98	69.14	69.92	68.41	251622	2026-06-15 14:27:26.588554
+1433	2021-08-12	67.64	67.93	68.13	67.15	427900	2026-06-15 14:27:26.588554
+1434	2021-08-13	67.53	67.8	67.81	67.44	410445	2026-06-15 14:27:26.588554
+1435	2021-08-16	67.92	67.67	67.93	67.64	400322	2026-06-15 14:27:26.588554
+1436	2021-08-17	68.71	68.67	68.83	68.26	261046	2026-06-15 14:27:26.588554
+1437	2021-08-18	69.12	69.08	69.19	68.83	370900	2026-06-15 14:27:26.588554
+1438	2021-08-19	66.76	66.81	66.83	66.1	396922	2026-06-15 14:27:26.588554
+1439	2021-08-20	68.95	68.83	69.53	67.78	418976	2026-06-15 14:27:26.588554
+1440	2021-08-23	70.26	71.07	70.66	69.73	274354	2026-06-15 14:27:26.588554
+1441	2021-08-24	69.07	69.39	69.36	68.47	338929	2026-06-15 14:27:26.588554
+1442	2021-08-25	68.24	68.58	68.6	67.88	509568	2026-06-15 14:27:26.588554
+1443	2021-08-26	68.74	68.95	69.47	68.53	432932	2026-06-15 14:27:26.588554
+1444	2021-08-27	69.39	69.39	69.91	69.37	436833	2026-06-15 14:27:26.588554
+1445	2021-08-30	66.99	67.03	67.02	66.55	294813	2026-06-15 14:27:26.588554
+1446	2021-08-31	68.93	68.88	69.25	68.82	291786	2026-06-15 14:27:26.588554
+1447	2021-09-01	72.44	72.45	72.83	72.42	287265	2026-06-15 14:27:26.588554
+1448	2021-09-02	74.86	75.39	75.06	74.1	285435	2026-06-15 14:27:26.588554
+1449	2021-09-03	71.35	71.4	72.08	71.2	344071	2026-06-15 14:27:26.588554
+1450	2021-09-06	74.05	73.5	74.17	73.44	504444	2026-06-15 14:27:26.588554
+1451	2021-09-07	71.01	71.03	71.34	70.6	289974	2026-06-15 14:27:26.588554
+1452	2021-09-08	75.3	74.73	75.69	74.89	355373	2026-06-15 14:27:26.588554
+1453	2021-09-09	70.65	70.93	71.64	70.16	252050	2026-06-15 14:27:26.588554
+1454	2021-09-10	70.46	70.72	70.63	70.2	438847	2026-06-15 14:27:26.588554
+1455	2021-09-13	70.38	70.62	71.06	69.78	293001	2026-06-15 14:27:26.588554
+1456	2021-09-14	71.77	71.79	72.23	71.61	437710	2026-06-15 14:27:26.588554
+1457	2021-09-15	72.43	72.57	72.82	71.78	443283	2026-06-15 14:27:26.588554
+1458	2021-09-16	73.75	73.78	74.71	72.82	311665	2026-06-15 14:27:26.588554
+1459	2021-09-17	72.03	72.46	72.09	71.73	316262	2026-06-15 14:27:26.588554
+1460	2021-09-20	74.02	74.19	74.36	73.53	409903	2026-06-15 14:27:26.588554
+1461	2021-09-21	74.91	74.58	75.31	73.56	293642	2026-06-15 14:27:26.588554
+1462	2021-09-22	73.07	73.11	73.7	72.57	275559	2026-06-15 14:27:26.588554
+1463	2021-09-23	72.22	72.23	72.28	71.9	384092	2026-06-15 14:27:26.588554
+1464	2021-09-24	73.47	73.77	73.49	72.37	499690	2026-06-15 14:27:26.588554
+1465	2021-09-27	72.93	72.95	73.3	72.29	448747	2026-06-15 14:27:26.588554
+1466	2021-09-28	73.37	73.8	73.67	72.74	319274	2026-06-15 14:27:26.588554
+1467	2021-09-29	71.77	71.47	72.05	71.56	292534	2026-06-15 14:27:26.588554
+1468	2021-09-30	72.88	73.35	73.11	72.86	414134	2026-06-15 14:27:26.588554
+1469	2021-10-01	82.28	81.92	83.53	82.09	418383	2026-06-15 14:27:26.588554
+1470	2021-10-04	83.31	83.14	83.45	83.13	279257	2026-06-15 14:27:26.588554
+1471	2021-10-05	82.93	82.76	83.09	82.14	407732	2026-06-15 14:27:26.588554
+1472	2021-10-06	80.93	80.51	81.06	80.23	323609	2026-06-15 14:27:26.588554
+1473	2021-10-07	80.63	80.33	80.66	79.33	402499	2026-06-15 14:27:26.588554
+1474	2021-10-08	83.39	84.17	83.43	83.02	538173	2026-06-15 14:27:26.588554
+1475	2021-10-11	82.31	82.35	82.34	81.45	398554	2026-06-15 14:27:26.588554
+1476	2021-10-12	82.85	82.37	83.72	82.7	303268	2026-06-15 14:27:26.588554
+1477	2021-10-13	79.22	78.85	79.58	78.48	429362	2026-06-15 14:27:26.588554
+1478	2021-10-14	81.57	81.43	81.72	80.95	530783	2026-06-15 14:27:26.588554
+1479	2021-10-15	79.99	79.52	80.09	79.89	411779	2026-06-15 14:27:26.588554
+1480	2021-10-18	82.11	82.73	82.28	81.03	284531	2026-06-15 14:27:26.588554
+1481	2021-10-19	79.66	79.26	79.86	79.38	481809	2026-06-15 14:27:26.588554
+1482	2021-10-20	80.7	80.69	81.34	80.52	504225	2026-06-15 14:27:26.588554
+1483	2021-10-21	80.33	80.63	81.37	79.55	301195	2026-06-15 14:27:26.588554
+1484	2021-10-22	80.3	79.83	80.33	80.3	346347	2026-06-15 14:27:26.588554
+1485	2021-10-25	82.12	82.14	83.29	81.54	426076	2026-06-15 14:27:26.588554
+1486	2021-10-26	79.79	80.01	80.5	79.2	446713	2026-06-15 14:27:26.588554
+1487	2021-10-27	83.19	82.92	83.81	83.15	340827	2026-06-15 14:27:26.588554
+1488	2021-10-28	81.96	82.41	82.41	81.58	274826	2026-06-15 14:27:26.588554
+1489	2021-10-29	84.07	84.56	84.21	82.62	331941	2026-06-15 14:27:26.588554
+1490	2021-11-01	81.91	81.99	82.36	80.77	461957	2026-06-15 14:27:26.588554
+1491	2021-11-02	81.5	81.33	82.2	79.96	412962	2026-06-15 14:27:26.588554
+1492	2021-11-03	80.06	80.92	80.43	80.04	532193	2026-06-15 14:27:26.588554
+1493	2021-11-04	80.04	80.03	81.32	79.5	521090	2026-06-15 14:27:26.588554
+1494	2021-11-05	78.84	78.8	78.97	78.15	309321	2026-06-15 14:27:26.588554
+1495	2021-11-08	78.86	78.28	79.85	78.09	516847	2026-06-15 14:27:26.588554
+1496	2021-11-09	78.95	78.34	79	77.96	539102	2026-06-15 14:27:26.588554
+1497	2021-11-10	79.23	78.61	79.79	78.82	292229	2026-06-15 14:27:26.588554
+1498	2021-11-11	77.92	77.87	78.89	77.14	269975	2026-06-15 14:27:26.588554
+1499	2021-11-12	81.41	82	82.41	80.51	430225	2026-06-15 14:27:26.588554
+1500	2021-11-15	79.83	79.81	80.02	78.78	346059	2026-06-15 14:27:26.588554
+1501	2021-11-16	81.36	81.72	82.43	80.18	450422	2026-06-15 14:27:26.588554
+1502	2021-11-17	79.01	79.47	79.72	78.19	402999	2026-06-15 14:27:26.588554
+1503	2021-11-18	77.51	77.22	78.47	77.03	433305	2026-06-15 14:27:26.588554
+1504	2021-11-19	76.94	77.41	77.1	76.78	495011	2026-06-15 14:27:26.588554
+1505	2021-11-22	80.14	79.62	80.21	79.66	466184	2026-06-15 14:27:26.588554
+1506	2021-11-23	77.49	77.56	78.24	76.56	521991	2026-06-15 14:27:26.588554
+1507	2021-11-24	79.87	80.02	80.7	79.68	284707	2026-06-15 14:27:26.588554
+1508	2021-11-25	79.35	79.37	79.37	78.89	408492	2026-06-15 14:27:26.588554
+1509	2021-11-26	77.97	77.62	78.36	77.85	369273	2026-06-15 14:27:26.588554
+1510	2021-11-29	78.87	79.07	80.42	77.9	256570	2026-06-15 14:27:26.588554
+1511	2021-11-30	81.93	81.5	82.02	81.2	371863	2026-06-15 14:27:26.588554
+1512	2021-12-01	71.76	71.84	72.86	71.65	298320	2026-06-15 14:27:26.588554
+1513	2021-12-02	72.41	72.52	73.57	71.85	478071	2026-06-15 14:27:26.588554
+1514	2021-12-03	72	72.05	72.16	71.64	493341	2026-06-15 14:27:26.588554
+1515	2021-12-06	74.21	73.93	74.89	74.03	353409	2026-06-15 14:27:26.588554
+1516	2021-12-07	70.69	70.76	71.22	70.5	447096	2026-06-15 14:27:26.588554
+1517	2021-12-08	72.77	72.72	73.23	72.25	495014	2026-06-15 14:27:26.588554
+1518	2021-12-09	73.84	73.46	73.99	73.77	341736	2026-06-15 14:27:26.588554
+1519	2021-12-10	73.65	74.4	74.51	72.96	458786	2026-06-15 14:27:26.588554
+1520	2021-12-13	71.36	70.89	72.59	71	329973	2026-06-15 14:27:26.588554
+1521	2021-12-14	72.62	73.18	73.03	71.99	357522	2026-06-15 14:27:26.588554
+1522	2021-12-15	73.12	72.69	73.15	73.07	392635	2026-06-15 14:27:26.588554
+1523	2021-12-16	69.81	69.92	70.11	68.9	408059	2026-06-15 14:27:26.588554
+1524	2021-12-17	73.26	73.24	73.42	73.2	295379	2026-06-15 14:27:26.588554
+1525	2021-12-20	72.23	71.89	72.55	72.21	519295	2026-06-15 14:27:26.588554
+1526	2021-12-21	74.67	74.96	74.84	74.64	371999	2026-06-15 14:27:26.588554
+1527	2021-12-22	72.72	72.7	73	72.54	481513	2026-06-15 14:27:26.588554
+1528	2021-12-23	72.29	72.49	72.38	71.73	322588	2026-06-15 14:27:26.588554
+1529	2021-12-24	71.81	72	72.32	71.48	369735	2026-06-15 14:27:26.588554
+1530	2021-12-27	72.42	72.91	72.74	72.29	292668	2026-06-15 14:27:26.588554
+1531	2021-12-28	72.95	73.09	73.03	72.25	469861	2026-06-15 14:27:26.588554
+1532	2021-12-29	73.88	74.06	74.13	73.25	485128	2026-06-15 14:27:26.588554
+1533	2021-12-30	71.09	71.41	71.48	70.68	388299	2026-06-15 14:27:26.588554
+1534	2021-12-31	73.56	73.72	73.9	73.23	510337	2026-06-15 14:27:26.588554
+1535	2022-01-03	82.66	83.11	83.05	82.61	299104	2026-06-15 14:27:26.588554
+1536	2022-01-04	82.54	82.27	83.16	82.08	341658	2026-06-15 14:27:26.588554
+1537	2022-01-05	82.52	83.58	83.42	82.46	267727	2026-06-15 14:27:26.588554
+1538	2022-01-06	83.74	82.94	84.26	82.78	544054	2026-06-15 14:27:26.588554
+1539	2022-01-07	84.52	84.96	84.87	83.4	281007	2026-06-15 14:27:26.588554
+1540	2022-01-10	82.75	82.33	82.88	82.36	484565	2026-06-15 14:27:26.588554
+1541	2022-01-11	82.49	82.5	82.62	81.99	522900	2026-06-15 14:27:26.588554
+1542	2022-01-12	83.46	82.81	83.86	83.04	324069	2026-06-15 14:27:26.588554
+1543	2022-01-13	84.09	84.82	85.4	83.91	381733	2026-06-15 14:27:26.588554
+1544	2022-01-14	83.92	83.53	83.97	83.56	275592	2026-06-15 14:27:26.588554
+1545	2022-01-17	82.81	82.69	83.6	81.98	318619	2026-06-15 14:27:26.588554
+1546	2022-01-18	84.86	84.26	85.68	84.5	279301	2026-06-15 14:27:26.588554
+1547	2022-01-19	84.73	84.9	84.83	83.16	306273	2026-06-15 14:27:26.588554
+1548	2022-01-20	83.75	84.78	83.97	83.65	259715	2026-06-15 14:27:26.588554
+1549	2022-01-21	81.88	81.78	82.46	81.42	542826	2026-06-15 14:27:26.588554
+1550	2022-01-24	83.29	83.63	84.36	82.92	268073	2026-06-15 14:27:26.588554
+1551	2022-01-25	83.71	84.06	85.38	83.71	452043	2026-06-15 14:27:26.588554
+1552	2022-01-26	82.74	83.22	83.05	82.45	441703	2026-06-15 14:27:26.588554
+1553	2022-01-27	85.43	85.24	85.61	85.18	290461	2026-06-15 14:27:26.588554
+1554	2022-01-28	83	82.63	83.5	82.64	380513	2026-06-15 14:27:26.588554
+1555	2022-01-31	83.33	83.63	83.69	83.25	279984	2026-06-15 14:27:26.588554
+1556	2022-02-01	91.61	91.87	92.21	90.59	395788	2026-06-15 14:27:26.588554
+1557	2022-02-02	92.03	92.49	92.12	91.65	498289	2026-06-15 14:27:26.588554
+1558	2022-02-03	92.34	92.04	92.38	91.01	414685	2026-06-15 14:27:26.588554
+1559	2022-02-04	91.13	91.02	91.59	91.09	473894	2026-06-15 14:27:26.588554
+1560	2022-02-07	91.35	91.2	92.44	91.24	406104	2026-06-15 14:27:26.588554
+1561	2022-02-08	89.95	89.7	90.14	89.4	404363	2026-06-15 14:27:26.588554
+1562	2022-02-09	93.73	93.38	94.74	93.18	449900	2026-06-15 14:27:26.588554
+1563	2022-02-10	92.33	92.23	94.02	91.56	282371	2026-06-15 14:27:26.588554
+1564	2022-02-11	94	92.98	94.8	93.71	539749	2026-06-15 14:27:26.588554
+1565	2022-02-14	92.38	91.18	92.94	91.95	366981	2026-06-15 14:27:26.588554
+1566	2022-02-15	92.17	92.44	93.18	91.44	472084	2026-06-15 14:27:26.588554
+1567	2022-02-16	90.27	91.2	90.29	88.85	370575	2026-06-15 14:27:26.588554
+1568	2022-02-17	91.6	91.19	92.28	91.28	475019	2026-06-15 14:27:26.588554
+1569	2022-02-18	93.14	93.29	93.54	92.39	506553	2026-06-15 14:27:26.588554
+1570	2022-02-21	92.03	91.51	92.18	91.19	253631	2026-06-15 14:27:26.588554
+1571	2022-02-22	92.57	92.29	92.93	90.97	474033	2026-06-15 14:27:26.588554
+1572	2022-02-23	90.34	90.22	91.9	90.08	499686	2026-06-15 14:27:26.588554
+1573	2022-02-24	90	90.77	90.05	89.94	473332	2026-06-15 14:27:26.588554
+1574	2022-02-25	92.73	92.77	93.64	92.64	457888	2026-06-15 14:27:26.588554
+1575	2022-02-28	89.79	89.5	90.49	88.93	375426	2026-06-15 14:27:26.588554
+1576	2022-03-01	107.92	107.54	108.3	107.68	386511	2026-06-15 14:27:26.588554
+1577	2022-03-02	107.36	107.38	107.48	106.55	311063	2026-06-15 14:27:26.588554
+1578	2022-03-03	109.65	109.37	110.8	108.55	458432	2026-06-15 14:27:26.588554
+1579	2022-03-04	107.26	107.23	108.02	106.43	284964	2026-06-15 14:27:26.588554
+1580	2022-03-07	108.54	107.99	109.47	108.51	289071	2026-06-15 14:27:26.588554
+1581	2022-03-08	109.88	110.08	110.4	109.13	295838	2026-06-15 14:27:26.588554
+1582	2022-03-09	109.03	108.61	109.82	108.82	435165	2026-06-15 14:27:26.588554
+1583	2022-03-10	112.01	111.85	113	111.81	334080	2026-06-15 14:27:26.588554
+1584	2022-03-11	106.48	106.62	107.26	106.22	287643	2026-06-15 14:27:26.588554
+1585	2022-03-14	108.39	109.26	108.64	108.17	348605	2026-06-15 14:27:26.588554
+1586	2022-03-15	110.11	110.39	110.76	109.19	308005	2026-06-15 14:27:26.588554
+1587	2022-03-16	109.31	109.63	109.88	108.85	427558	2026-06-15 14:27:26.588554
+1588	2022-03-17	109.47	110.06	110.1	107.46	506695	2026-06-15 14:27:26.588554
+1589	2022-03-18	107.26	107.37	107.47	106.4	410878	2026-06-15 14:27:26.588554
+1590	2022-03-21	109	109.42	110.05	108.48	494839	2026-06-15 14:27:26.588554
+1591	2022-03-22	109.06	109.65	109.23	107.93	415268	2026-06-15 14:27:26.588554
+1592	2022-03-23	109.83	109.22	111.1	109.38	367235	2026-06-15 14:27:26.588554
+1593	2022-03-24	110.61	110.79	110.68	110.33	444509	2026-06-15 14:27:26.588554
+1594	2022-03-25	106.3	105.86	107.24	105.91	524231	2026-06-15 14:27:26.588554
+1595	2022-03-28	106.91	106.24	106.92	105.57	268313	2026-06-15 14:27:26.588554
+1596	2022-03-29	109.03	108.07	109.84	107.79	514167	2026-06-15 14:27:26.588554
+1597	2022-03-30	108.02	107.12	108.38	106.77	318099	2026-06-15 14:27:26.588554
+1598	2022-03-31	111.58	111.4	111.65	111.38	518787	2026-06-15 14:27:26.588554
+1599	2022-04-01	104.93	105.24	105.94	104.07	444718	2026-06-15 14:27:26.588554
+1600	2022-04-04	100.26	100.69	100.57	99.4	402889	2026-06-15 14:27:26.588554
+1601	2022-04-05	103.23	103.64	103.79	100.94	517613	2026-06-15 14:27:26.588554
+1602	2022-04-06	100.69	100.63	102.19	100.62	539530	2026-06-15 14:27:26.588554
+1603	2022-04-07	102.96	102.68	103.69	102.24	546195	2026-06-15 14:27:26.588554
+1604	2022-04-08	99.75	100.19	99.76	99.07	253471	2026-06-15 14:27:26.588554
+1605	2022-04-11	102.24	103.1	103.37	101.65	478981	2026-06-15 14:27:26.588554
+1606	2022-04-12	102	101.92	103.44	101.74	333369	2026-06-15 14:27:26.588554
+1607	2022-04-13	101.15	100.03	101.58	100.59	383168	2026-06-15 14:27:26.588554
+1608	2022-04-14	102.84	103.57	102.92	102.09	410381	2026-06-15 14:27:26.588554
+1609	2022-04-15	101.74	101.51	103.18	100.39	292821	2026-06-15 14:27:26.588554
+1610	2022-04-18	101.36	101.77	102.17	101.32	382503	2026-06-15 14:27:26.588554
+1611	2022-04-19	101.63	101.21	101.8	100.92	269675	2026-06-15 14:27:26.588554
+1612	2022-04-20	100.15	100.51	101.7	99.77	291800	2026-06-15 14:27:26.588554
+1613	2022-04-21	100.98	100.41	100.99	100.9	280682	2026-06-15 14:27:26.588554
+1614	2022-04-22	102.9	103.17	103.13	102.84	485718	2026-06-15 14:27:26.588554
+1615	2022-04-25	103.55	104.2	103.86	103.1	501924	2026-06-15 14:27:26.588554
+1616	2022-04-26	102.99	102.29	104.02	102.75	530466	2026-06-15 14:27:26.588554
+1617	2022-04-27	102.25	102.17	102.36	101.58	414437	2026-06-15 14:27:26.588554
+1618	2022-04-28	103.33	103.41	105.53	103.09	295232	2026-06-15 14:27:26.588554
+1619	2022-04-29	100.52	99.05	100.59	99.66	263140	2026-06-15 14:27:26.588554
+1620	2022-05-02	110.23	110.15	111.01	110.05	458015	2026-06-15 14:27:26.588554
+1621	2022-05-03	112.48	112.52	113.41	111.84	471095	2026-06-15 14:27:26.588554
+1622	2022-05-04	109.07	109.05	109.78	107.21	530852	2026-06-15 14:27:26.588554
+1623	2022-05-05	108.78	109.66	109.61	108.67	453127	2026-06-15 14:27:26.588554
+1624	2022-05-06	110.16	109.78	110.9	109.72	539768	2026-06-15 14:27:26.588554
+1625	2022-05-09	112.17	113.3	112.51	110.53	403335	2026-06-15 14:27:26.588554
+1626	2022-05-10	111.02	112.79	111.09	110.86	271253	2026-06-15 14:27:26.588554
+1627	2022-05-11	108.25	108.14	110.09	107.55	387924	2026-06-15 14:27:26.588554
+1628	2022-05-12	106.56	107.29	106.73	106.25	511716	2026-06-15 14:27:26.588554
+1629	2022-05-13	111.3	111.89	112.53	108.84	458139	2026-06-15 14:27:26.588554
+1630	2022-05-16	110.19	110.04	111.18	109.49	382970	2026-06-15 14:27:26.588554
+1631	2022-05-17	108.67	109.08	109.12	108.41	270074	2026-06-15 14:27:26.588554
+1632	2022-05-18	111.22	110.92	111.78	110.92	304400	2026-06-15 14:27:26.588554
+1633	2022-05-19	110.01	110.8	110.05	109	513427	2026-06-15 14:27:26.588554
+1634	2022-05-20	108.15	108.3	108.46	107.63	538963	2026-06-15 14:27:26.588554
+1635	2022-05-23	110.52	110.32	110.81	110.35	396108	2026-06-15 14:27:26.588554
+1636	2022-05-24	107.5	107.89	108.37	107.26	293732	2026-06-15 14:27:26.588554
+1637	2022-05-25	110.78	111.36	111.28	110.72	370987	2026-06-15 14:27:26.588554
+1638	2022-05-26	108.64	107.54	109	108.06	452041	2026-06-15 14:27:26.588554
+1639	2022-05-27	107.69	107.97	109.43	106.33	436987	2026-06-15 14:27:26.588554
+1640	2022-05-30	110.23	110.41	110.25	109.43	379295	2026-06-15 14:27:26.588554
+1641	2022-05-31	109.05	108.5	109.64	108.64	436368	2026-06-15 14:27:26.588554
+1642	2022-06-01	113.96	114.54	114.67	112.71	305077	2026-06-15 14:27:26.588554
+1643	2022-06-02	113.82	114.64	114	113.36	436339	2026-06-15 14:27:26.588554
+1644	2022-06-03	115.44	116.08	115.89	114.85	391521	2026-06-15 14:27:26.588554
+1645	2022-06-06	116.32	115.49	116.64	114.87	446749	2026-06-15 14:27:26.588554
+1646	2022-06-07	115.08	115.04	116.09	114.85	262109	2026-06-15 14:27:26.588554
+1647	2022-06-08	114.19	114.15	114.2	113.82	494325	2026-06-15 14:27:26.588554
+1648	2022-06-09	116.06	115.91	116.46	115.58	489017	2026-06-15 14:27:26.588554
+1649	2022-06-10	116.29	116.38	116.75	116.25	523146	2026-06-15 14:27:26.588554
+1650	2022-06-13	115.82	117.03	117.89	115.1	505095	2026-06-15 14:27:26.588554
+1651	2022-06-14	115.47	115.27	117.17	115.26	387888	2026-06-15 14:27:26.588554
+1652	2022-06-15	111.59	112.02	111.85	110.16	342493	2026-06-15 14:27:26.588554
+1653	2022-06-16	116.48	116.38	118.07	116.38	347136	2026-06-15 14:27:26.588554
+1654	2022-06-17	113.88	113.49	115.42	113.1	299812	2026-06-15 14:27:26.588554
+1655	2022-06-20	113.24	113.52	113.46	112.36	309871	2026-06-15 14:27:26.588554
+1656	2022-06-21	115.97	115.57	118.46	114.29	360155	2026-06-15 14:27:26.588554
+1657	2022-06-22	112.91	112.65	113.01	112.02	463397	2026-06-15 14:27:26.588554
+1658	2022-06-23	117.62	118.06	118.86	116.08	278803	2026-06-15 14:27:26.588554
+1659	2022-06-24	113.44	113.06	113.79	112.78	520914	2026-06-15 14:27:26.588554
+1660	2022-06-27	115.57	115.92	115.7	114.2	423824	2026-06-15 14:27:26.588554
+1661	2022-06-28	113.77	113.5	115.18	113.67	385450	2026-06-15 14:27:26.588554
+1662	2022-06-29	114.1	114.05	114.73	112.82	517554	2026-06-15 14:27:26.588554
+1663	2022-06-30	112.62	113.95	114.99	111.75	293056	2026-06-15 14:27:26.588554
+1664	2022-07-01	103.44	104.85	103.92	103.04	386554	2026-06-15 14:27:26.588554
+1665	2022-07-04	100.89	101.56	101.58	100.78	272054	2026-06-15 14:27:26.588554
+1666	2022-07-05	104.68	103.89	104.73	104.09	258210	2026-06-15 14:27:26.588554
+1667	2022-07-06	103.05	103.84	103.2	102.41	449919	2026-06-15 14:27:26.588554
+1668	2022-07-07	103.39	103.67	104.2	102.72	384832	2026-06-15 14:27:26.588554
+1669	2022-07-08	104.24	103.78	104.99	104.02	506638	2026-06-15 14:27:26.588554
+1670	2022-07-11	100.76	101.87	100.98	99.85	476416	2026-06-15 14:27:26.588554
+1671	2022-07-12	102.56	103.15	102.7	101.55	391130	2026-06-15 14:27:26.588554
+1672	2022-07-13	101.86	101.7	103.94	101.61	506453	2026-06-15 14:27:26.588554
+1673	2022-07-14	101.87	101.54	102.48	100.49	415696	2026-06-15 14:27:26.588554
+1674	2022-07-15	101.5	100.75	102.12	101.36	257461	2026-06-15 14:27:26.588554
+1675	2022-07-18	102.5	102.12	103.19	100.99	481496	2026-06-15 14:27:26.588554
+1676	2022-07-19	103.31	103.18	103.86	102.16	398930	2026-06-15 14:27:26.588554
+1677	2022-07-20	105.12	105.24	106.28	104.82	265434	2026-06-15 14:27:26.588554
+1678	2022-07-21	98.98	99.37	99.91	97.72	466992	2026-06-15 14:27:26.588554
+1679	2022-07-22	103.91	103.38	106.48	103.54	533456	2026-06-15 14:27:26.588554
+1680	2022-07-25	100.31	100.23	100.66	100.27	514155	2026-06-15 14:27:26.588554
+1681	2022-07-26	102.45	102.51	103.54	101.45	341575	2026-06-15 14:27:26.588554
+1682	2022-07-27	101.74	101.96	101.97	101.08	400871	2026-06-15 14:27:26.588554
+1683	2022-07-28	102.61	102.55	102.62	102.25	453199	2026-06-15 14:27:26.588554
+1684	2022-07-29	99.08	98.86	100.23	98.42	500100	2026-06-15 14:27:26.588554
+1685	2022-08-01	93.83	93.67	94.05	93.31	411475	2026-06-15 14:27:26.588554
+1686	2022-08-02	93.07	92.71	93.19	92.92	481312	2026-06-15 14:27:26.588554
+1687	2022-08-03	90.86	90.92	91.68	89.99	252352	2026-06-15 14:27:26.588554
+1688	2022-08-04	91.28	91.06	91.37	90.8	390641	2026-06-15 14:27:26.588554
+1689	2022-08-05	91.95	91.73	92.41	91.83	472740	2026-06-15 14:27:26.588554
+1690	2022-08-08	93.14	92.29	93.51	92.42	406951	2026-06-15 14:27:26.588554
+1691	2022-08-09	92.32	92.71	92.74	91.8	324965	2026-06-15 14:27:26.588554
+1692	2022-08-10	95.79	95.18	96.65	95.45	382379	2026-06-15 14:27:26.588554
+1693	2022-08-11	93.69	94.42	94.26	92.44	538565	2026-06-15 14:27:26.588554
+1694	2022-08-12	94.57	94.38	94.64	94.34	529003	2026-06-15 14:27:26.588554
+1695	2022-08-15	93.28	93.26	93.57	92.89	263893	2026-06-15 14:27:26.588554
+1696	2022-08-16	92.88	93.06	93.75	92.87	345071	2026-06-15 14:27:26.588554
+1697	2022-08-17	90.36	89.8	90.42	88.01	514598	2026-06-15 14:27:26.588554
+1698	2022-08-18	93.39	93.26	95.2	91.36	436292	2026-06-15 14:27:26.588554
+1699	2022-08-19	92.97	93.27	93.18	92.58	433043	2026-06-15 14:27:26.588554
+1700	2022-08-22	92.9	92.53	93.93	92.14	290510	2026-06-15 14:27:26.588554
+1701	2022-08-23	92.86	92.95	93.61	91.13	340102	2026-06-15 14:27:26.588554
+1702	2022-08-24	93.02	93.46	93.31	92.18	368325	2026-06-15 14:27:26.588554
+1703	2022-08-25	96.18	96.42	96.53	95.35	393016	2026-06-15 14:27:26.588554
+1704	2022-08-26	91.8	92.19	92.3	91.41	391958	2026-06-15 14:27:26.588554
+1705	2022-08-29	92.88	92.97	93.14	92.42	467228	2026-06-15 14:27:26.588554
+1706	2022-08-30	94.17	94.5	94.74	93.27	396110	2026-06-15 14:27:26.588554
+1707	2022-08-31	93.01	92.66	93.67	92.89	258605	2026-06-15 14:27:26.588554
+1708	2022-09-01	88.32	88.62	88.87	87.1	409292	2026-06-15 14:27:26.588554
+1709	2022-09-02	84.69	84.96	84.92	84.37	486731	2026-06-15 14:27:26.588554
+1710	2022-09-05	86.18	86.45	86.7	85.42	511570	2026-06-15 14:27:26.588554
+1711	2022-09-06	86.68	85.81	86.81	86.5	379936	2026-06-15 14:27:26.588554
+1712	2022-09-07	85.71	86.23	85.73	84.58	528710	2026-06-15 14:27:26.588554
+1713	2022-09-08	81.73	82.24	81.85	80.55	275235	2026-06-15 14:27:26.588554
+1714	2022-09-09	84.19	84.43	84.72	83.62	264743	2026-06-15 14:27:26.588554
+1715	2022-09-12	86.28	86.95	87.48	85.8	485422	2026-06-15 14:27:26.588554
+1716	2022-09-13	84.72	84.78	85	84.36	304238	2026-06-15 14:27:26.588554
+1717	2022-09-14	86.33	87.02	86.76	85.85	540134	2026-06-15 14:27:26.588554
+1718	2022-09-15	84.37	84.3	86.02	84.05	484104	2026-06-15 14:27:26.588554
+1719	2022-09-16	83.88	84.25	84.43	83.56	363550	2026-06-15 14:27:26.588554
+1720	2022-09-19	85.47	85.4	85.91	85.06	491060	2026-06-15 14:27:26.588554
+1721	2022-09-20	86.56	86.95	86.64	86.24	393252	2026-06-15 14:27:26.588554
+1722	2022-09-21	85.39	85.22	85.53	84.94	361022	2026-06-15 14:27:26.588554
+1723	2022-09-22	88.49	88.48	88.78	86.77	316914	2026-06-15 14:27:26.588554
+1724	2022-09-23	83.76	83.17	83.9	82.82	252257	2026-06-15 14:27:26.588554
+1725	2022-09-26	82.83	83.42	83.72	82.28	302389	2026-06-15 14:27:26.588554
+1726	2022-09-27	86.94	86.47	86.99	86.47	464764	2026-06-15 14:27:26.588554
+1727	2022-09-28	84.66	85	84.94	83.8	495739	2026-06-15 14:27:26.588554
+1728	2022-09-29	85.79	85.36	86.02	84.1	310948	2026-06-15 14:27:26.588554
+1729	2022-09-30	84.48	84.53	85.43	83.3	383172	2026-06-15 14:27:26.588554
+1730	2022-10-03	84.22	84.25	84.75	84.1	463666	2026-06-15 14:27:26.588554
+1731	2022-10-04	82.32	82.64	82.45	80.73	405159	2026-06-15 14:27:26.588554
+1732	2022-10-05	86.4	86.19	86.65	86.32	531755	2026-06-15 14:27:26.588554
+1733	2022-10-06	84.5	84.56	84.99	83.98	301374	2026-06-15 14:27:26.588554
+1734	2022-10-07	85.3	84.98	85.43	84.63	319561	2026-06-15 14:27:26.588554
+1735	2022-10-10	86.42	87.21	87.27	85.2	436740	2026-06-15 14:27:26.588554
+1736	2022-10-11	85.82	85.92	85.85	85.7	278151	2026-06-15 14:27:26.588554
+1737	2022-10-12	82.69	82.62	83.31	82.43	252204	2026-06-15 14:27:26.588554
+1738	2022-10-13	85.48	86.19	86.6	85.36	488083	2026-06-15 14:27:26.588554
+1739	2022-10-14	86.3	86.02	86.34	86.16	419530	2026-06-15 14:27:26.588554
+1740	2022-10-17	86.6	86.19	87.6	85.81	436823	2026-06-15 14:27:26.588554
+1741	2022-10-18	83.94	84.3	85	83.15	282430	2026-06-15 14:27:26.588554
+1742	2022-10-19	85.31	85.28	85.63	84.64	500541	2026-06-15 14:27:26.588554
+1743	2022-10-20	84.21	84.46	84.31	84.18	334703	2026-06-15 14:27:26.588554
+1744	2022-10-21	88.21	88.05	88.21	88.08	543577	2026-06-15 14:27:26.588554
+1745	2022-10-24	85.39	85.47	86.29	84.65	293527	2026-06-15 14:27:26.588554
+1746	2022-10-25	86.19	86.33	86.45	86.16	337178	2026-06-15 14:27:26.588554
+1747	2022-10-26	86.67	86.42	86.73	86.32	378389	2026-06-15 14:27:26.588554
+1748	2022-10-27	86.31	86.56	86.71	86.29	305745	2026-06-15 14:27:26.588554
+1749	2022-10-28	85.49	85.72	85.76	85.21	522355	2026-06-15 14:27:26.588554
+1750	2022-10-31	86.53	86.73	87.43	85.87	343783	2026-06-15 14:27:26.588554
+1751	2022-11-01	84.12	84.27	84.4	83.35	389227	2026-06-15 14:27:26.588554
+1752	2022-11-02	81.86	81.67	82.26	81.28	455743	2026-06-15 14:27:26.588554
+1753	2022-11-03	83.23	83.03	83.81	83.22	318323	2026-06-15 14:27:26.588554
+1754	2022-11-04	82.47	81.81	83.5	81.58	358125	2026-06-15 14:27:26.588554
+1755	2022-11-07	81.08	81.4	81.73	80.64	498922	2026-06-15 14:27:26.588554
+1756	2022-11-08	84.83	85.11	85.02	84.5	493588	2026-06-15 14:27:26.588554
+1757	2022-11-09	82.91	83.15	83.37	82.84	296002	2026-06-15 14:27:26.588554
+1758	2022-11-10	81.14	81.21	81.63	81.02	461142	2026-06-15 14:27:26.588554
+1759	2022-11-11	83.18	83.81	83.79	83.1	532844	2026-06-15 14:27:26.588554
+1760	2022-11-14	82.34	82.38	83.02	82.06	491133	2026-06-15 14:27:26.588554
+1761	2022-11-15	83.43	83.28	83.9	82.59	295095	2026-06-15 14:27:26.588554
+1762	2022-11-16	82.6	83.14	83.4	82.56	408128	2026-06-15 14:27:26.588554
+1763	2022-11-17	81.19	81.16	81.4	80.86	504205	2026-06-15 14:27:26.588554
+1764	2022-11-18	85.51	85.57	87.18	85.07	546292	2026-06-15 14:27:26.588554
+1765	2022-11-21	82.34	82.27	82.77	81.68	340453	2026-06-15 14:27:26.588554
+1766	2022-11-22	84.27	84.46	85.04	83.82	343526	2026-06-15 14:27:26.588554
+1767	2022-11-23	84.49	84.8	84.65	84.1	467583	2026-06-15 14:27:26.588554
+1768	2022-11-24	85.25	85.35	86.42	84.84	522158	2026-06-15 14:27:26.588554
+1769	2022-11-25	83.59	83.01	84.76	83.07	490341	2026-06-15 14:27:26.588554
+1770	2022-11-28	84.23	83.81	85.24	83.52	392180	2026-06-15 14:27:26.588554
+1771	2022-11-29	83.46	83.53	84.1	81.92	522872	2026-06-15 14:27:26.588554
+1772	2022-11-30	81.91	82	82.03	81.73	263689	2026-06-15 14:27:26.588554
+1773	2022-12-01	77.2	76.96	77.46	76.68	465516	2026-06-15 14:27:26.588554
+1774	2022-12-02	76.02	76.19	76.3	75.45	275675	2026-06-15 14:27:26.588554
+1775	2022-12-05	75.63	75.82	76.77	74.49	379887	2026-06-15 14:27:26.588554
+1776	2022-12-06	75.62	75.79	76.49	75.58	338791	2026-06-15 14:27:26.588554
+1777	2022-12-07	77.46	77.48	77.82	77.15	391650	2026-06-15 14:27:26.588554
+1778	2022-12-08	74.4	74.38	74.79	73.78	487501	2026-06-15 14:27:26.588554
+1779	2022-12-09	73.97	73.65	74.62	73.69	277798	2026-06-15 14:27:26.588554
+1780	2022-12-12	77.55	77.55	77.9	77.06	536479	2026-06-15 14:27:26.588554
+1781	2022-12-13	76.47	76.28	76.53	76.06	356464	2026-06-15 14:27:26.588554
+1782	2022-12-14	74.4	73.9	74.64	73.79	498709	2026-06-15 14:27:26.588554
+1783	2022-12-15	77.84	77.78	78.38	77.41	543946	2026-06-15 14:27:26.588554
+1784	2022-12-16	75.67	75.23	75.81	74.92	538193	2026-06-15 14:27:26.588554
+1785	2022-12-19	75.86	75.99	76.62	75.52	372332	2026-06-15 14:27:26.588554
+1786	2022-12-20	76.1	75.47	76.42	75.79	344776	2026-06-15 14:27:26.588554
+1787	2022-12-21	76.41	76.42	76.57	76.17	378467	2026-06-15 14:27:26.588554
+1788	2022-12-22	74.32	74.08	74.87	73.43	295833	2026-06-15 14:27:26.588554
+1789	2022-12-23	78.4	79.23	78.47	77.9	385189	2026-06-15 14:27:26.588554
+1790	2022-12-26	76.77	76.49	77.43	76.7	445691	2026-06-15 14:27:26.588554
+1791	2022-12-27	75.42	75.71	75.48	74.19	494629	2026-06-15 14:27:26.588554
+1792	2022-12-28	77.8	78.16	78.43	76.82	304330	2026-06-15 14:27:26.588554
+1793	2022-12-29	77.61	77.74	77.78	77.27	513957	2026-06-15 14:27:26.588554
+1794	2022-12-30	74.78	74.59	75.64	74.7	423123	2026-06-15 14:27:26.588554
+1795	2023-01-02	77.98	78.55	78.43	77.51	371759	2026-06-15 14:27:26.588554
+1796	2023-01-03	76.89	76.96	76.98	76.7	512043	2026-06-15 14:27:26.588554
+1797	2023-01-04	78.2	78.43	78.39	76.44	449570	2026-06-15 14:27:26.588554
+1798	2023-01-05	79.94	80.22	80.82	79.11	522595	2026-06-15 14:27:26.588554
+1799	2023-01-06	78.59	77.85	79.3	77.98	303053	2026-06-15 14:27:26.588554
+1800	2023-01-09	79.79	79.97	80.43	79.53	527068	2026-06-15 14:27:26.588554
+1801	2023-01-10	77.35	77.39	78.17	76.31	332409	2026-06-15 14:27:26.588554
+1802	2023-01-11	76.29	76.7	76.5	75.93	424875	2026-06-15 14:27:26.588554
+1803	2023-01-12	79.07	79.24	79.22	78.4	430903	2026-06-15 14:27:26.588554
+1804	2023-01-13	80.23	80.57	80.72	79.88	519496	2026-06-15 14:27:26.588554
+1805	2023-01-16	78.36	77.41	79.18	77.86	543851	2026-06-15 14:27:26.588554
+1806	2023-01-17	78.19	77.79	78.43	77.1	543925	2026-06-15 14:27:26.588554
+1807	2023-01-18	77.95	78.32	78.58	77.42	397026	2026-06-15 14:27:26.588554
+1808	2023-01-19	77.51	77.19	77.89	76.84	402297	2026-06-15 14:27:26.588554
+1809	2023-01-20	75.39	75.21	75.71	74.76	492998	2026-06-15 14:27:26.588554
+1810	2023-01-23	78.62	79.1	78.98	78.26	331257	2026-06-15 14:27:26.588554
+1811	2023-01-24	76.85	76.74	77.32	76.46	267413	2026-06-15 14:27:26.588554
+1812	2023-01-25	78.1	77.98	79.97	77.87	511545	2026-06-15 14:27:26.588554
+1813	2023-01-26	77.52	77.11	78.02	76.05	539662	2026-06-15 14:27:26.588554
+1814	2023-01-27	76.61	76.81	76.83	76	413187	2026-06-15 14:27:26.588554
+1815	2023-01-30	77.41	77.77	77.59	76.81	425121	2026-06-15 14:27:26.588554
+1816	2023-01-31	78.34	77.64	79.49	77.72	402185	2026-06-15 14:27:26.588554
+1817	2023-02-01	75.33	74.75	75.5	75.27	511798	2026-06-15 14:27:26.588554
+1818	2023-02-02	76.05	75.78	76.41	75.6	352811	2026-06-15 14:27:26.588554
+1819	2023-02-03	76.52	76.33	76.54	75.6	286320	2026-06-15 14:27:26.588554
+1820	2023-02-06	78.36	78.57	78.6	77.82	411121	2026-06-15 14:27:26.588554
+1821	2023-02-07	77.38	78.24	77.53	77.04	414044	2026-06-15 14:27:26.588554
+1822	2023-02-08	76.17	76.45	77.35	76.11	495017	2026-06-15 14:27:26.588554
+1823	2023-02-09	75.06	75.48	75.08	74.61	411081	2026-06-15 14:27:26.588554
+1824	2023-02-10	73.15	72.87	73.3	73.12	290142	2026-06-15 14:27:26.588554
+1825	2023-02-13	75.92	76.06	76.14	75.53	486187	2026-06-15 14:27:26.588554
+1826	2023-02-14	77.42	77.38	77.93	76.76	539192	2026-06-15 14:27:26.588554
+1827	2023-02-15	73.84	74.37	73.95	73.7	430882	2026-06-15 14:27:26.588554
+1828	2023-02-16	75.31	75.14	75.35	74.56	424514	2026-06-15 14:27:26.588554
+1829	2023-02-17	75.19	74.97	75.59	75.17	305480	2026-06-15 14:27:26.588554
+1830	2023-02-20	76.98	76.99	77.27	76.76	418017	2026-06-15 14:27:26.588554
+1831	2023-02-21	77.59	77.83	77.9	76.43	329698	2026-06-15 14:27:26.588554
+1832	2023-02-22	76.39	76.7	76.56	75.45	272010	2026-06-15 14:27:26.588554
+1833	2023-02-23	75.7	75.62	75.78	75.35	318842	2026-06-15 14:27:26.588554
+1834	2023-02-24	76.58	76.05	76.77	75.69	398961	2026-06-15 14:27:26.588554
+1835	2023-02-27	76.53	76.69	77.46	75.67	413244	2026-06-15 14:27:26.588554
+1836	2023-02-28	77.75	77.39	78.45	77.33	350922	2026-06-15 14:27:26.588554
+1837	2023-03-01	72.48	72.65	72.76	72.31	358944	2026-06-15 14:27:26.588554
+1838	2023-03-02	73.66	73.53	74.52	72.79	447097	2026-06-15 14:27:26.588554
+1839	2023-03-03	75	74.54	75.67	74.94	289178	2026-06-15 14:27:26.588554
+1840	2023-03-06	72.03	71.75	72.41	71.4	545866	2026-06-15 14:27:26.588554
+1841	2023-03-07	73.99	74.52	74.5	72.76	299522	2026-06-15 14:27:26.588554
+1842	2023-03-08	73.52	73.83	74.13	73.13	457352	2026-06-15 14:27:26.588554
+1843	2023-03-09	73.07	73.47	73.1	72.24	287019	2026-06-15 14:27:26.588554
+1844	2023-03-10	71.03	71.21	71.2	70.44	378585	2026-06-15 14:27:26.588554
+1845	2023-03-13	74.1	74.38	74.42	73.68	275939	2026-06-15 14:27:26.588554
+1846	2023-03-14	73.77	73.58	74.25	73.53	253748	2026-06-15 14:27:26.588554
+1847	2023-03-15	72.6	72.62	72.89	72.29	375829	2026-06-15 14:27:26.588554
+1848	2023-03-16	71.47	71.51	71.65	70.48	328278	2026-06-15 14:27:26.588554
+1849	2023-03-17	72.45	72.5	72.82	72.04	547647	2026-06-15 14:27:26.588554
+1850	2023-03-20	75.64	75.2	76.35	74.99	498724	2026-06-15 14:27:26.588554
+1851	2023-03-21	73.33	72.85	74.17	72.7	507438	2026-06-15 14:27:26.588554
+1852	2023-03-22	73.64	74.04	74.42	73.41	425458	2026-06-15 14:27:26.588554
+1853	2023-03-23	72.82	72.28	73.2	71.86	321196	2026-06-15 14:27:26.588554
+1854	2023-03-24	72.58	73.14	73.49	72.1	363711	2026-06-15 14:27:26.588554
+1855	2023-03-27	73.73	73.94	73.82	73.61	318798	2026-06-15 14:27:26.588554
+1856	2023-03-28	73.64	73.69	74.16	73.29	475162	2026-06-15 14:27:26.588554
+1857	2023-03-29	72.48	72.72	73.09	72.36	548326	2026-06-15 14:27:26.588554
+1858	2023-03-30	74.18	74.5	74.82	73.4	503187	2026-06-15 14:27:26.588554
+1859	2023-03-31	71.5	71.31	71.72	71.45	379744	2026-06-15 14:27:26.588554
+1860	2023-04-03	79.22	79.56	79.44	78.24	336795	2026-06-15 14:27:26.588554
+1861	2023-04-04	81.9	82.19	82.2	81.74	438505	2026-06-15 14:27:26.588554
+1862	2023-04-05	78.3	78.51	78.5	77.26	434099	2026-06-15 14:27:26.588554
+1863	2023-04-06	79.82	79.49	80.01	79.7	264995	2026-06-15 14:27:26.588554
+1864	2023-04-07	79.53	79.23	79.82	79.41	275517	2026-06-15 14:27:26.588554
+1865	2023-04-10	78.27	77.96	78.66	77.88	338151	2026-06-15 14:27:26.588554
+1866	2023-04-11	78.9	79.53	79.3	78.35	437655	2026-06-15 14:27:26.588554
+1867	2023-04-12	79.2	78.7	79.75	77.92	285903	2026-06-15 14:27:26.588554
+1868	2023-04-13	79.23	79.33	79.65	78.32	367305	2026-06-15 14:27:26.588554
+1869	2023-04-14	79.41	79.3	80.39	79.1	295619	2026-06-15 14:27:26.588554
+1870	2023-04-17	81.09	80.89	82.74	80.82	537623	2026-06-15 14:27:26.588554
+1871	2023-04-18	79.08	78.68	79.77	78.22	385203	2026-06-15 14:27:26.588554
+1872	2023-04-19	80.33	79.96	80.69	80.06	399886	2026-06-15 14:27:26.588554
+1873	2023-04-20	80.64	80.15	81.61	80.59	415129	2026-06-15 14:27:26.588554
+1874	2023-04-21	78.23	78.54	78.24	77.34	427597	2026-06-15 14:27:26.588554
+1875	2023-04-24	79.43	79.51	80.09	79.4	502084	2026-06-15 14:27:26.588554
+1876	2023-04-25	78.2	78.84	79.65	77.86	323616	2026-06-15 14:27:26.588554
+1877	2023-04-26	79.13	79.18	79.64	78.36	351407	2026-06-15 14:27:26.588554
+1878	2023-04-27	79.29	78.73	79.83	79.26	526175	2026-06-15 14:27:26.588554
+1879	2023-04-28	80.51	81.03	81.77	79.81	543624	2026-06-15 14:27:26.588554
+1880	2023-05-01	72.81	72.09	73.42	72.5	493935	2026-06-15 14:27:26.588554
+1881	2023-05-02	72.84	73.43	73.01	71.73	251881	2026-06-15 14:27:26.588554
+1882	2023-05-03	72.82	73.17	73.4	72.31	515406	2026-06-15 14:27:26.588554
+1883	2023-05-04	71.69	71.43	71.86	71.17	519045	2026-06-15 14:27:26.588554
+1884	2023-05-05	72.51	72.59	72.99	71.87	406877	2026-06-15 14:27:26.588554
+1885	2023-05-08	72.78	73.37	73.21	72.48	262100	2026-06-15 14:27:26.588554
+1886	2023-05-09	73.68	73.43	74.26	73.28	457609	2026-06-15 14:27:26.588554
+1887	2023-05-10	75.88	76.4	76.26	75.47	515129	2026-06-15 14:27:26.588554
+1888	2023-05-11	73.7	73.87	74.42	73.32	319504	2026-06-15 14:27:26.588554
+1889	2023-05-12	72.33	72.32	72.48	71.85	336124	2026-06-15 14:27:26.588554
+1890	2023-05-15	73.27	73.64	73.61	72.83	332806	2026-06-15 14:27:26.588554
+1891	2023-05-16	70.1	70.59	70.38	69.8	414957	2026-06-15 14:27:26.588554
+1892	2023-05-17	75.33	75.58	75.5	74.6	544067	2026-06-15 14:27:26.588554
+1893	2023-05-18	73.67	74.31	75.98	72.44	546629	2026-06-15 14:27:26.588554
+1894	2023-05-19	72.26	71.52	72.66	72.01	531836	2026-06-15 14:27:26.588554
+1895	2023-05-22	73.38	73.18	73.9	72.9	477434	2026-06-15 14:27:26.588554
+1896	2023-05-23	72.62	72.75	73.35	72.31	534944	2026-06-15 14:27:26.588554
+1897	2023-05-24	73.42	73.5	74.26	73.3	426469	2026-06-15 14:27:26.588554
+1898	2023-05-25	73.22	73.49	73.98	72.8	404455	2026-06-15 14:27:26.588554
+1899	2023-05-26	73.66	73.12	73.78	73.25	392482	2026-06-15 14:27:26.588554
+1900	2023-05-29	72.44	73.04	72.97	71.64	478931	2026-06-15 14:27:26.588554
+1901	2023-05-30	73.85	73.1	73.99	73.52	306889	2026-06-15 14:27:26.588554
+1902	2023-05-31	74.2	73.73	74.82	73.55	476999	2026-06-15 14:27:26.588554
+1903	2023-06-01	68.76	68.6	68.98	68.21	506446	2026-06-15 14:27:26.588554
+1904	2023-06-02	69.02	68.8	69.14	68.75	463175	2026-06-15 14:27:26.588554
+1905	2023-06-05	69.33	69.5	69.5	69.3	478129	2026-06-15 14:27:26.588554
+1906	2023-06-06	69.1	68.8	69.57	68.79	468306	2026-06-15 14:27:26.588554
+1907	2023-06-07	69.49	69.41	70.46	68.97	486371	2026-06-15 14:27:26.588554
+1908	2023-06-08	69.64	69.53	70.2	69.29	499432	2026-06-15 14:27:26.588554
+1909	2023-06-09	70.65	70.75	70.69	70.07	327525	2026-06-15 14:27:26.588554
+1910	2023-06-12	70.43	70.17	71.16	70.23	315785	2026-06-15 14:27:26.588554
+1911	2023-06-13	70.93	71.58	71.3	70.28	528404	2026-06-15 14:27:26.588554
+1912	2023-06-14	70.06	70.13	70.13	69.55	456486	2026-06-15 14:27:26.588554
+1913	2023-06-15	69.71	69.74	70.64	69.34	305798	2026-06-15 14:27:26.588554
+1914	2023-06-16	71.35	71.26	71.76	70.93	542410	2026-06-15 14:27:26.588554
+1915	2023-06-19	72.09	72.01	72.44	72.05	530539	2026-06-15 14:27:26.588554
+1916	2023-06-20	70.95	71.23	71.13	70.57	371724	2026-06-15 14:27:26.588554
+1917	2023-06-21	68.47	69.12	68.94	68.24	472820	2026-06-15 14:27:26.588554
+1918	2023-06-22	68.99	69.34	69.35	67.96	533028	2026-06-15 14:27:26.588554
+1919	2023-06-23	70.22	70.29	70.3	70.14	466750	2026-06-15 14:27:26.588554
+1920	2023-06-26	70.58	70.48	70.94	70.42	500351	2026-06-15 14:27:26.588554
+1921	2023-06-27	71.79	71.32	71.83	71.47	491084	2026-06-15 14:27:26.588554
+1922	2023-06-28	72.07	72.39	72.32	71.66	349319	2026-06-15 14:27:26.588554
+1923	2023-06-29	70.69	70.7	70.94	70.4	294036	2026-06-15 14:27:26.588554
+1924	2023-06-30	69.33	69.86	69.79	68.67	486304	2026-06-15 14:27:26.588554
+1925	2023-07-03	77.83	77.86	78.3	76.86	398459	2026-06-15 14:27:26.588554
+1926	2023-07-04	79.9	79.46	80.76	79.43	361023	2026-06-15 14:27:26.588554
+1927	2023-07-05	78.54	78.48	78.72	77.97	419024	2026-06-15 14:27:26.588554
+1928	2023-07-06	80.56	81.35	80.79	79.06	350260	2026-06-15 14:27:26.588554
+1929	2023-07-07	78.48	78.34	78.91	78.24	385899	2026-06-15 14:27:26.588554
+1930	2023-07-10	78.8	78.91	79.76	78.46	540951	2026-06-15 14:27:26.588554
+1931	2023-07-11	80.75	81.03	80.76	80.6	507336	2026-06-15 14:27:26.588554
+1932	2023-07-12	78.09	78.06	78.25	77.95	397878	2026-06-15 14:27:26.588554
+1933	2023-07-13	79.59	79.49	79.94	79.44	307221	2026-06-15 14:27:26.588554
+1934	2023-07-14	78.98	78.99	79.22	77.18	300599	2026-06-15 14:27:26.588554
+1935	2023-07-17	76.65	76.73	76.87	76.56	361426	2026-06-15 14:27:26.588554
+1936	2023-07-18	79.32	79.79	79.85	78.64	293856	2026-06-15 14:27:26.588554
+1937	2023-07-19	77.66	77.89	78.45	77.01	532579	2026-06-15 14:27:26.588554
+1938	2023-07-20	80.44	80.34	81.38	79.48	525848	2026-06-15 14:27:26.588554
+1939	2023-07-21	80.63	80.78	81.32	80.16	478584	2026-06-15 14:27:26.588554
+1940	2023-07-24	78.45	78.45	79.05	77.92	444840	2026-06-15 14:27:26.588554
+1941	2023-07-25	78.29	78.1	78.5	77.35	316253	2026-06-15 14:27:26.588554
+1942	2023-07-26	79.79	79.56	80.5	79.1	349352	2026-06-15 14:27:26.588554
+1943	2023-07-27	79.92	79.68	80.98	79.61	362138	2026-06-15 14:27:26.588554
+1944	2023-07-28	77.41	77.04	77.96	76.81	428296	2026-06-15 14:27:26.588554
+1945	2023-07-31	77.98	77.78	78.05	77.93	442994	2026-06-15 14:27:26.588554
+1946	2023-08-01	83.72	83.7	84	83.66	477203	2026-06-15 14:27:26.588554
+1947	2023-08-02	83.68	83.25	83.98	83.04	282766	2026-06-15 14:27:26.588554
+1948	2023-08-03	82.93	82.96	83.18	82	492555	2026-06-15 14:27:26.588554
+1949	2023-08-04	85.15	85.43	85.33	84.75	270855	2026-06-15 14:27:26.588554
+1950	2023-08-07	83.16	82.95	83.3	83.07	373805	2026-06-15 14:27:26.588554
+1951	2023-08-08	82.46	82.61	83.27	81.9	480780	2026-06-15 14:27:26.588554
+1952	2023-08-09	81.21	80.25	81.65	80.77	524892	2026-06-15 14:27:26.588554
+1953	2023-08-10	85.3	85.49	85.51	84.89	330152	2026-06-15 14:27:26.588554
+1954	2023-08-11	82.62	82.26	83.51	81.5	420948	2026-06-15 14:27:26.588554
+1955	2023-08-14	84.02	83.78	84.83	83.29	507450	2026-06-15 14:27:26.588554
+1956	2023-08-15	81.98	81.67	82.49	81.32	460834	2026-06-15 14:27:26.588554
+1957	2023-08-16	84.71	84.86	84.94	84.41	464303	2026-06-15 14:27:26.588554
+1958	2023-08-17	83.16	82.87	83.95	82.84	253748	2026-06-15 14:27:26.588554
+1959	2023-08-18	83.94	83.65	85.92	83.11	260068	2026-06-15 14:27:26.588554
+1960	2023-08-21	83.12	82.86	83.59	81.6	497667	2026-06-15 14:27:26.588554
+1961	2023-08-22	86.28	87.19	86.94	86.27	496686	2026-06-15 14:27:26.588554
+1962	2023-08-23	84.79	84.92	85.16	83.79	425982	2026-06-15 14:27:26.588554
+1963	2023-08-24	82.44	82.78	82.89	81.93	429971	2026-06-15 14:27:26.588554
+1964	2023-08-25	83.06	83.76	83.65	82.46	253009	2026-06-15 14:27:26.588554
+1965	2023-08-28	84.49	83.95	84.53	83.71	308741	2026-06-15 14:27:26.588554
+1966	2023-08-29	83.99	84.51	84.65	83.42	304745	2026-06-15 14:27:26.588554
+1967	2023-08-30	81.63	81.83	82.74	80.85	336803	2026-06-15 14:27:26.588554
+1968	2023-08-31	85.55	85.94	85.62	84.73	444549	2026-06-15 14:27:26.588554
+1969	2023-09-01	91.03	91.46	91.94	90.9	361462	2026-06-15 14:27:26.588554
+1970	2023-09-04	88.63	88.28	88.63	88.49	319517	2026-06-15 14:27:26.588554
+1971	2023-09-05	90.18	90.12	90.4	90.08	329267	2026-06-15 14:27:26.588554
+1972	2023-09-06	90.86	90.63	91.37	90.22	257697	2026-06-15 14:27:26.588554
+1973	2023-09-07	87.6	87.66	87.96	87.44	326436	2026-06-15 14:27:26.588554
+1974	2023-09-08	91.3	90.73	92.57	90.45	507165	2026-06-15 14:27:26.588554
+1975	2023-09-11	89.56	89.42	91.84	89.07	273382	2026-06-15 14:27:26.588554
+1976	2023-09-12	90.86	91.48	91.38	90.19	353533	2026-06-15 14:27:26.588554
+1977	2023-09-13	89.7	90.94	89.92	89.26	259726	2026-06-15 14:27:26.588554
+1978	2023-09-14	86.77	87.42	87.38	85.69	528104	2026-06-15 14:27:26.588554
+1979	2023-09-15	89.08	89	90.8	88.51	318111	2026-06-15 14:27:26.588554
+1980	2023-09-18	88.91	88.18	89.63	88.33	344108	2026-06-15 14:27:26.588554
+1981	2023-09-19	90.04	90.68	90.8	89.33	378674	2026-06-15 14:27:26.588554
+1982	2023-09-20	88.61	88.82	88.85	87.49	329526	2026-06-15 14:27:26.588554
+1983	2023-09-21	89.67	90.32	90.45	89.14	485707	2026-06-15 14:27:26.588554
+1984	2023-09-22	88.66	88.64	89.4	87.64	514179	2026-06-15 14:27:26.588554
+1985	2023-09-25	91.34	90.86	93.3	90.62	306396	2026-06-15 14:27:26.588554
+1986	2023-09-26	88.52	89.53	88.58	87.68	296121	2026-06-15 14:27:26.588554
+1987	2023-09-27	92.32	91.82	92.33	91.7	251466	2026-06-15 14:27:26.588554
+1988	2023-09-28	88.73	89.04	89.56	88.7	402271	2026-06-15 14:27:26.588554
+1989	2023-09-29	88.29	89.01	89.16	87.61	371136	2026-06-15 14:27:26.588554
+1990	2023-10-02	85.12	84.22	85.86	84.56	332666	2026-06-15 14:27:26.588554
+1991	2023-10-03	86.56	86.35	86.79	86.43	408477	2026-06-15 14:27:26.588554
+1992	2023-10-04	87.27	86.53	87.95	86.46	395486	2026-06-15 14:27:26.588554
+1993	2023-10-05	87.07	88.04	87.09	86.51	442933	2026-06-15 14:27:26.588554
+1994	2023-10-06	83.71	83.88	84.51	83.28	281728	2026-06-15 14:27:26.588554
+1995	2023-10-09	86.57	87.35	87.4	85.57	272490	2026-06-15 14:27:26.588554
+1996	2023-10-10	85.59	85.44	85.84	84.82	313965	2026-06-15 14:27:26.588554
+1997	2023-10-11	85.67	85.45	85.85	85.44	498099	2026-06-15 14:27:26.588554
+1998	2023-10-12	85.61	85.67	85.66	85.02	512651	2026-06-15 14:27:26.588554
+1999	2023-10-13	86.87	87.28	87.58	86.64	336436	2026-06-15 14:27:26.588554
+2000	2023-10-16	87.33	87.15	88.37	85.74	420205	2026-06-15 14:27:26.588554
+2001	2023-10-17	84.86	84.43	85.55	84.46	299593	2026-06-15 14:27:26.588554
+2002	2023-10-18	88.67	89.29	89.79	88.57	458785	2026-06-15 14:27:26.588554
+2003	2023-10-19	87.56	88.46	87.65	87.4	407195	2026-06-15 14:27:26.588554
+2004	2023-10-20	85.9	85.44	86.48	85.78	403267	2026-06-15 14:27:26.588554
+2005	2023-10-23	86.38	86.27	86.56	85.26	341321	2026-06-15 14:27:26.588554
+2006	2023-10-24	85.88	86.06	85.93	85.59	539987	2026-06-15 14:27:26.588554
+2007	2023-10-25	88.15	88.24	88.54	87.25	472633	2026-06-15 14:27:26.588554
+2008	2023-10-26	87.28	87.24	88.22	86.92	373099	2026-06-15 14:27:26.588554
+2009	2023-10-27	86.65	86.89	86.88	86.3	416964	2026-06-15 14:27:26.588554
+2010	2023-10-30	84.66	84.76	84.75	84.26	513068	2026-06-15 14:27:26.588554
+2011	2023-10-31	85.55	86.16	86.11	84.41	548277	2026-06-15 14:27:26.588554
+2012	2023-11-01	74.16	74.02	75.38	73.51	520675	2026-06-15 14:27:26.588554
+2013	2023-11-02	77.3	77.13	77.31	77.27	523423	2026-06-15 14:27:26.588554
+2014	2023-11-03	78.75	78.78	78.86	78.41	518614	2026-06-15 14:27:26.588554
+2015	2023-11-06	77.77	77.82	78.6	77.51	456314	2026-06-15 14:27:26.588554
+2016	2023-11-07	76.22	76.19	77.6	75.79	347624	2026-06-15 14:27:26.588554
+2017	2023-11-08	75.66	75.71	75.73	75.47	505116	2026-06-15 14:27:26.588554
+2018	2023-11-09	77.26	77.45	77.57	76.67	345386	2026-06-15 14:27:26.588554
+2019	2023-11-10	77.02	77.72	77.91	76.43	257235	2026-06-15 14:27:26.588554
+2020	2023-11-13	77.7	78.14	78.02	77.13	473660	2026-06-15 14:27:26.588554
+2021	2023-11-14	77.19	76.98	77.32	76.88	488657	2026-06-15 14:27:26.588554
+2022	2023-11-15	76.48	76.23	76.61	75.8	420956	2026-06-15 14:27:26.588554
+2023	2023-11-16	76.53	76.4	77.33	76.22	492037	2026-06-15 14:27:26.588554
+2024	2023-11-17	77.48	77.77	78.57	76.63	436443	2026-06-15 14:27:26.588554
+2025	2023-11-20	76.93	77.04	77.91	76.19	451904	2026-06-15 14:27:26.588554
+2026	2023-11-21	76.93	77.52	78.21	76.29	534981	2026-06-15 14:27:26.588554
+2027	2023-11-22	77.76	78.49	78.1	76.68	278756	2026-06-15 14:27:26.588554
+2028	2023-11-23	79.16	78.95	79.9	77.5	349485	2026-06-15 14:27:26.588554
+2029	2023-11-24	77.36	76.89	77.68	76.9	271398	2026-06-15 14:27:26.588554
+2030	2023-11-27	76.33	75.69	76.77	76.22	465379	2026-06-15 14:27:26.588554
+2031	2023-11-28	76.36	76.94	77.11	76.03	421097	2026-06-15 14:27:26.588554
+2032	2023-11-29	76.29	76.06	76.31	75.15	387844	2026-06-15 14:27:26.588554
+2033	2023-11-30	77.76	77.38	77.99	77.41	350485	2026-06-15 14:27:26.588554
+2034	2023-12-01	72.55	72.33	72.74	72.39	515025	2026-06-15 14:27:26.588554
+2035	2023-12-04	71.8	72.56	71.84	71.31	322572	2026-06-15 14:27:26.588554
+2036	2023-12-05	72.37	72.68	72.69	71.59	311360	2026-06-15 14:27:26.588554
+2037	2023-12-06	73.02	73.35	73.65	72.89	444454	2026-06-15 14:27:26.588554
+2038	2023-12-07	74.47	74.78	74.73	74.38	549488	2026-06-15 14:27:26.588554
+2039	2023-12-08	71.86	71.48	72.23	71.39	487612	2026-06-15 14:27:26.588554
+2040	2023-12-11	71.07	71.14	72.13	70.66	334518	2026-06-15 14:27:26.588554
+2041	2023-12-12	73.77	74.38	74.21	73.41	440195	2026-06-15 14:27:26.588554
+2042	2023-12-13	74.11	74	75.08	73.52	308755	2026-06-15 14:27:26.588554
+2043	2023-12-14	71.83	72.01	72.53	70.81	316323	2026-06-15 14:27:26.588554
+2044	2023-12-15	72.96	73.21	73.04	72.47	512210	2026-06-15 14:27:26.588554
+2045	2023-12-18	72.47	72.34	72.73	72.2	500231	2026-06-15 14:27:26.588554
+2046	2023-12-19	70.79	70.84	71.39	69.65	496331	2026-06-15 14:27:26.588554
+2047	2023-12-20	73.38	73.12	73.49	72.79	267118	2026-06-15 14:27:26.588554
+2048	2023-12-21	71.69	72.01	71.85	71	512875	2026-06-15 14:27:26.588554
+2049	2023-12-22	72.79	72.14	73.64	72.39	396259	2026-06-15 14:27:26.588554
+2050	2023-12-25	71.86	71.63	72.3	70.97	349694	2026-06-15 14:27:26.588554
+2051	2023-12-26	73.3	73.03	73.61	72.64	255586	2026-06-15 14:27:26.588554
+2052	2023-12-27	72.63	72.56	72.9	72.34	270711	2026-06-15 14:27:26.588554
+2053	2023-12-28	72.38	72.41	73.83	71.93	478506	2026-06-15 14:27:26.588554
+2054	2023-12-29	72.01	72.33	72.52	71.76	513606	2026-06-15 14:27:26.588554
+2055	2024-01-01	76.28	76.29	76.29	75.64	474737	2026-06-15 14:27:26.588554
+2056	2024-01-02	73.8	73.59	73.88	73.65	366582	2026-06-15 14:27:26.588554
+2057	2024-01-03	74.63	74.76	74.98	74.55	345558	2026-06-15 14:27:26.588554
+2058	2024-01-04	74.27	74.7	74.7	73.77	442898	2026-06-15 14:27:26.588554
+2059	2024-01-05	73.59	73.98	74.65	73.38	532152	2026-06-15 14:27:26.588554
+2060	2024-01-08	74.42	75.05	75	73.69	547124	2026-06-15 14:27:26.588554
+2061	2024-01-09	76.57	76.51	76.73	75.79	414211	2026-06-15 14:27:26.588554
+2062	2024-01-10	73.65	73.55	74.04	72.56	541230	2026-06-15 14:27:26.588554
+2063	2024-01-11	73.34	72.97	73.8	73.16	364165	2026-06-15 14:27:26.588554
+2064	2024-01-12	73.9	74.19	74.01	73.08	303634	2026-06-15 14:27:26.588554
+2065	2024-01-15	74.88	74.93	75.08	74.83	291505	2026-06-15 14:27:26.588554
+2066	2024-01-16	72.23	71.46	72.99	72.07	546902	2026-06-15 14:27:26.588554
+2067	2024-01-17	73.84	73.85	74.46	73.17	364010	2026-06-15 14:27:26.588554
+2068	2024-01-18	73.62	74.25	73.68	73.03	527948	2026-06-15 14:27:26.588554
+2069	2024-01-19	73.13	73.52	73.47	72.84	355072	2026-06-15 14:27:26.588554
+2070	2024-01-22	73.35	73.64	73.75	72.63	457440	2026-06-15 14:27:26.588554
+2071	2024-01-23	73.82	74.05	73.83	73.69	444152	2026-06-15 14:27:26.588554
+2072	2024-01-24	72.94	73.99	74.49	72.53	339813	2026-06-15 14:27:26.588554
+2073	2024-01-25	73.03	73.09	73.33	72.84	250215	2026-06-15 14:27:26.588554
+2074	2024-01-26	72.64	72.56	73.1	72.57	522544	2026-06-15 14:27:26.588554
+2075	2024-01-29	73.17	73.01	73.36	72.44	498780	2026-06-15 14:27:26.588554
+2076	2024-01-30	74.78	74.84	75.45	74.66	545830	2026-06-15 14:27:26.588554
+2077	2024-01-31	73.71	73.73	73.73	73.39	446753	2026-06-15 14:27:26.588554
+2078	2024-02-01	77.25	77.03	78.25	77.07	354186	2026-06-15 14:27:26.588554
+2079	2024-02-02	77.32	76.89	77.39	77.25	484453	2026-06-15 14:27:26.588554
+2080	2024-02-05	74.92	74.46	75.2	73.82	466597	2026-06-15 14:27:26.588554
+2081	2024-02-06	77.26	77.63	78.31	76.98	408097	2026-06-15 14:27:26.588554
+2082	2024-02-07	75.74	75.55	76.38	75.18	405063	2026-06-15 14:27:26.588554
+2083	2024-02-08	77.33	77.83	77.88	77.22	256464	2026-06-15 14:27:26.588554
+2084	2024-02-09	76.73	76.76	76.87	75.77	354127	2026-06-15 14:27:26.588554
+2085	2024-02-12	76.77	76.38	76.9	76.16	259196	2026-06-15 14:27:26.588554
+2086	2024-02-13	78.04	77.7	79.43	77.74	506433	2026-06-15 14:27:26.588554
+2087	2024-02-14	77	77.31	78.21	76.6	364003	2026-06-15 14:27:26.588554
+2088	2024-02-15	76.05	75.88	76.26	75.25	463893	2026-06-15 14:27:26.588554
+2089	2024-02-16	76.38	76.54	76.44	76.3	289886	2026-06-15 14:27:26.588554
+2090	2024-02-19	77.88	77.63	78.16	77.66	363793	2026-06-15 14:27:26.588554
+2091	2024-02-20	76.5	76.57	76.66	76.47	290860	2026-06-15 14:27:26.588554
+2092	2024-02-21	78.34	78.21	79.27	78.1	442150	2026-06-15 14:27:26.588554
+2093	2024-02-22	77.79	77.87	78.13	77.5	299768	2026-06-15 14:27:26.588554
+2094	2024-02-23	75.52	76.02	76.19	74.67	547542	2026-06-15 14:27:26.588554
+2095	2024-02-26	77.58	77.7	78.15	76.61	391385	2026-06-15 14:27:26.588554
+2096	2024-02-27	77.04	77.08	77.17	76.6	400056	2026-06-15 14:27:26.588554
+2097	2024-02-28	78.81	79.05	78.91	78.25	402049	2026-06-15 14:27:26.588554
+2098	2024-02-29	74.31	74.5	74.62	72.78	270056	2026-06-15 14:27:26.588554
+2099	2024-03-01	79.45	79.22	80.18	79.36	400644	2026-06-15 14:27:26.588554
+2100	2024-03-04	79.92	79.6	80.04	79.63	412448	2026-06-15 14:27:26.588554
+2101	2024-03-05	81.49	81.25	81.77	80.55	515864	2026-06-15 14:27:26.588554
+2102	2024-03-06	79.86	80.51	80.06	78.66	449316	2026-06-15 14:27:26.588554
+2103	2024-03-07	78.7	79.12	78.98	78.12	283324	2026-06-15 14:27:26.588554
+2104	2024-03-08	79.47	79.94	80.41	79	404961	2026-06-15 14:27:26.588554
+2105	2024-03-11	84.05	84.1	84.09	83.63	479530	2026-06-15 14:27:26.588554
+2106	2024-03-12	78.94	79.01	79.06	78.75	525160	2026-06-15 14:27:26.588554
+2107	2024-03-13	79.47	79.64	80.03	78.77	376082	2026-06-15 14:27:26.588554
+2108	2024-03-14	81.65	81.81	81.82	80.66	418112	2026-06-15 14:27:26.588554
+2109	2024-03-15	82.16	82.35	82.78	81.83	466775	2026-06-15 14:27:26.588554
+2110	2024-03-18	82.49	82.65	82.96	82.21	395213	2026-06-15 14:27:26.588554
+2111	2024-03-19	80.35	80.1	80.38	80.25	453975	2026-06-15 14:27:26.588554
+2112	2024-03-20	79.9	80.09	80.73	79.17	292317	2026-06-15 14:27:26.588554
+2113	2024-03-21	79.08	78.75	79.22	78.44	496060	2026-06-15 14:27:26.588554
+2114	2024-03-22	79.78	80.06	79.94	78.27	508667	2026-06-15 14:27:26.588554
+2115	2024-03-25	81.95	82.04	81.99	80.73	285709	2026-06-15 14:27:26.588554
+2116	2024-03-26	79.54	79.07	79.63	79.06	518591	2026-06-15 14:27:26.588554
+2117	2024-03-27	79.37	79.98	79.48	78.94	462235	2026-06-15 14:27:26.588554
+2118	2024-03-28	81.75	81.45	82.04	80.62	366220	2026-06-15 14:27:26.588554
+2119	2024-03-29	80.02	80.45	82.36	79.79	331268	2026-06-15 14:27:26.588554
+2120	2024-04-01	84.39	84.78	86	84.11	339242	2026-06-15 14:27:26.588554
+2121	2024-04-02	86.91	86.67	87.67	86.36	512678	2026-06-15 14:27:26.588554
+2122	2024-04-03	84.72	84.41	84.89	84.43	296233	2026-06-15 14:27:26.588554
+2123	2024-04-04	85.03	85.11	85.19	84.27	496231	2026-06-15 14:27:26.588554
+2124	2024-04-05	84.03	83.58	84.76	83.43	250363	2026-06-15 14:27:26.588554
+2125	2024-04-08	85.24	85.47	85.85	84.84	504822	2026-06-15 14:27:26.588554
+2126	2024-04-09	83.68	83.05	83.91	82.7	441313	2026-06-15 14:27:26.588554
+2127	2024-04-10	85.6	86.22	85.73	85.25	279063	2026-06-15 14:27:26.588554
+2128	2024-04-11	84.95	84.67	86.35	83.87	326411	2026-06-15 14:27:26.588554
+2129	2024-04-12	83.35	83.56	83.41	83	273004	2026-06-15 14:27:26.588554
+2130	2024-04-15	85.33	85.59	86.98	85.04	521189	2026-06-15 14:27:26.588554
+2131	2024-04-16	82.63	82.64	83.13	81.26	520012	2026-06-15 14:27:26.588554
+2132	2024-04-17	82.5	82.65	82.71	81.42	390183	2026-06-15 14:27:26.588554
+2133	2024-04-18	86.66	86.43	87.49	85.95	411149	2026-06-15 14:27:26.588554
+2134	2024-04-19	83.2	83.53	84.95	82.73	381827	2026-06-15 14:27:26.588554
+2135	2024-04-22	84.53	83.94	84.96	84.51	526393	2026-06-15 14:27:26.588554
+2136	2024-04-23	85.3	85.21	85.76	84.5	273777	2026-06-15 14:27:26.588554
+2137	2024-04-24	86.43	85.87	86.65	85.54	387799	2026-06-15 14:27:26.588554
+2138	2024-04-25	84.8	84.66	85.35	84.65	364881	2026-06-15 14:27:26.588554
+2139	2024-04-26	87.19	86.57	87.75	86.59	271341	2026-06-15 14:27:26.588554
+2140	2024-04-29	87.22	86.72	87.3	86.55	545457	2026-06-15 14:27:26.588554
+2141	2024-04-30	85.12	85.45	85.59	84.98	337453	2026-06-15 14:27:26.588554
+2142	2024-05-01	79.22	78.62	79.5	79.17	515470	2026-06-15 14:27:26.588554
+2143	2024-05-02	79.32	79.39	79.57	78.85	287860	2026-06-15 14:27:26.588554
+2144	2024-05-03	80.71	80.67	80.92	80.53	405976	2026-06-15 14:27:26.588554
+2145	2024-05-06	80.59	80.7	80.74	80.11	533816	2026-06-15 14:27:26.588554
+2146	2024-05-07	78.97	79.42	79.45	78.49	520590	2026-06-15 14:27:26.588554
+2147	2024-05-08	78.2	77.99	78.44	77.43	442537	2026-06-15 14:27:26.588554
+2148	2024-05-09	77.51	77.44	77.71	76.78	547594	2026-06-15 14:27:26.588554
+2149	2024-05-10	80.2	79.43	80.65	79.12	306116	2026-06-15 14:27:26.588554
+2150	2024-05-13	77.64	77.42	78.2	77.64	343109	2026-06-15 14:27:26.588554
+2151	2024-05-14	81.05	80.51	82.02	80.9	252637	2026-06-15 14:27:26.588554
+2152	2024-05-15	79.25	79.47	79.82	78.46	363768	2026-06-15 14:27:26.588554
+2153	2024-05-16	80.15	80.18	80.53	80.07	319202	2026-06-15 14:27:26.588554
+2154	2024-05-17	78.56	78.41	78.96	78.48	269403	2026-06-15 14:27:26.588554
+2155	2024-05-20	80.22	80.38	81.07	79.59	355386	2026-06-15 14:27:26.588554
+2156	2024-05-21	80.81	80.19	81.31	79.8	509278	2026-06-15 14:27:26.588554
+2157	2024-05-22	79.95	79.56	80.08	79.46	470326	2026-06-15 14:27:26.588554
+2158	2024-05-23	78.5	78.81	78.71	77.37	503017	2026-06-15 14:27:26.588554
+2159	2024-05-24	81.45	81.17	82.1	80.34	530790	2026-06-15 14:27:26.588554
+2160	2024-05-27	79.1	79.08	79.16	79	352326	2026-06-15 14:27:26.588554
+2161	2024-05-28	79.75	79.9	80.06	78.9	396895	2026-06-15 14:27:26.588554
+2162	2024-05-29	76.63	76.62	76.95	76.16	398790	2026-06-15 14:27:26.588554
+2163	2024-05-30	79.07	79.44	79.34	78.73	527648	2026-06-15 14:27:26.588554
+2164	2024-05-31	80.81	80.57	80.87	80.2	434381	2026-06-15 14:27:26.588554
+2165	2024-06-03	82.79	82.61	82.86	82.03	516294	2026-06-15 14:27:26.588554
+2166	2024-06-04	80.57	80.43	80.77	79.4	546379	2026-06-15 14:27:26.588554
+2167	2024-06-05	80.82	81.08	82.03	79.99	513312	2026-06-15 14:27:26.588554
+2168	2024-06-06	80	79.71	80.23	78.5	280373	2026-06-15 14:27:26.588554
+2169	2024-06-07	78.4	78.46	78.63	77.79	287879	2026-06-15 14:27:26.588554
+2170	2024-06-10	80.39	81.45	80.99	79.29	458137	2026-06-15 14:27:26.588554
+2171	2024-06-11	81.66	82.27	81.67	81.62	504043	2026-06-15 14:27:26.588554
+2172	2024-06-12	76.94	76.52	77.29	76.79	409762	2026-06-15 14:27:26.588554
+2173	2024-06-13	80.71	79.56	81.11	80.39	264390	2026-06-15 14:27:26.588554
+2174	2024-06-14	80.48	81.1	81.18	79.98	438788	2026-06-15 14:27:26.588554
+2175	2024-06-17	81.6	81.61	81.7	81.39	523326	2026-06-15 14:27:26.588554
+2176	2024-06-18	82.91	83.19	83.14	82.38	402948	2026-06-15 14:27:26.588554
+2177	2024-06-19	80.49	80.25	80.58	80.29	468168	2026-06-15 14:27:26.588554
+2178	2024-06-20	79.56	79.7	79.81	79.36	400862	2026-06-15 14:27:26.588554
+2179	2024-06-21	80.5	80.53	80.61	79.57	431323	2026-06-15 14:27:26.588554
+2180	2024-06-24	79.49	79.8	79.87	78.97	481226	2026-06-15 14:27:26.588554
+2181	2024-06-25	80.01	80.03	80.31	79.23	315439	2026-06-15 14:27:26.588554
+2182	2024-06-26	81.88	81.43	82.02	81.74	506427	2026-06-15 14:27:26.588554
+2183	2024-06-27	81.52	82.17	81.58	80.8	528011	2026-06-15 14:27:26.588554
+2184	2024-06-28	77.85	78.06	78.41	77.61	505230	2026-06-15 14:27:26.588554
+2185	2024-07-01	83.95	84.01	85.42	82.63	452918	2026-06-15 14:27:26.588554
+2186	2024-07-02	82.51	81.69	82.84	82.32	357669	2026-06-15 14:27:26.588554
+2187	2024-07-03	81.87	81.77	82.1	81.64	495847	2026-06-15 14:27:26.588554
+2188	2024-07-04	83.09	83.75	83.49	83.03	543313	2026-06-15 14:27:26.588554
+2189	2024-07-05	85.17	85.58	86.2	84.38	355723	2026-06-15 14:27:26.588554
+2190	2024-07-08	82.48	82.38	84.06	82.48	409788	2026-06-15 14:27:26.588554
+2191	2024-07-09	81.56	82.05	82.01	81.47	501842	2026-06-15 14:27:26.588554
+2192	2024-07-10	82.8	82.76	83.09	81.79	255495	2026-06-15 14:27:26.588554
+2193	2024-07-11	81.35	81.73	81.96	80.83	540696	2026-06-15 14:27:26.588554
+2194	2024-07-12	81.86	81.83	82.67	81.67	296562	2026-06-15 14:27:26.588554
+2195	2024-07-15	81.8	81.61	82.28	81.67	535291	2026-06-15 14:27:26.588554
+2196	2024-07-16	81.52	81.72	81.61	80.81	301024	2026-06-15 14:27:26.588554
+2197	2024-07-17	80.45	80.76	81.04	79.78	325118	2026-06-15 14:27:26.588554
+2198	2024-07-18	83.99	83.6	85.67	82.47	499717	2026-06-15 14:27:26.588554
+2199	2024-07-19	80.52	80.39	80.84	79.19	456717	2026-06-15 14:27:26.588554
+2200	2024-07-22	82.79	83.73	83.42	82.58	327511	2026-06-15 14:27:26.588554
+2201	2024-07-23	82.52	82.44	82.81	82.25	293539	2026-06-15 14:27:26.588554
+2202	2024-07-24	81.15	81.11	81.7	80.44	298784	2026-06-15 14:27:26.588554
+2203	2024-07-25	81.05	80.44	81.16	80.45	431413	2026-06-15 14:27:26.588554
+2204	2024-07-26	83.31	82.97	83.76	83.11	407255	2026-06-15 14:27:26.588554
+2205	2024-07-29	84.88	83.82	85.55	83.71	318369	2026-06-15 14:27:26.588554
+2206	2024-07-30	81.75	81.53	81.9	80.61	326425	2026-06-15 14:27:26.588554
+2207	2024-07-31	82	81.63	83.07	81.87	323313	2026-06-15 14:27:26.588554
+2208	2024-08-01	77.72	77.69	78.38	77.12	335366	2026-06-15 14:27:26.588554
+2209	2024-08-02	76.41	76.91	76.52	75.94	548845	2026-06-15 14:27:26.588554
+2210	2024-08-05	76.92	76.37	77.17	76.5	355185	2026-06-15 14:27:26.588554
+2211	2024-08-06	77.58	77.68	77.88	75.86	475461	2026-06-15 14:27:26.588554
+2212	2024-08-07	76	75.94	76.74	75.8	382965	2026-06-15 14:27:26.588554
+2213	2024-08-08	78.89	79.31	79.49	78.58	264016	2026-06-15 14:27:26.588554
+2214	2024-08-09	81.08	80.77	81.78	80.54	437877	2026-06-15 14:27:26.588554
+2215	2024-08-12	76.04	76.17	76.3	75.31	482200	2026-06-15 14:27:26.588554
+2216	2024-08-13	76.4	76.63	77.93	76.28	281819	2026-06-15 14:27:26.588554
+2217	2024-08-14	78.42	78.32	78.52	78.02	540180	2026-06-15 14:27:26.588554
+2218	2024-08-15	79.22	79.59	79.91	78.42	396692	2026-06-15 14:27:26.588554
+2219	2024-08-16	78.04	77.85	78.57	77.98	537667	2026-06-15 14:27:26.588554
+2220	2024-08-19	77.62	77.86	77.85	77.38	523497	2026-06-15 14:27:26.588554
+2221	2024-08-20	77.09	76.48	78.02	76.9	422517	2026-06-15 14:27:26.588554
+2222	2024-08-21	78.27	77.97	78.7	77.06	311192	2026-06-15 14:27:26.588554
+2223	2024-08-22	77.86	77.99	78.06	77.07	441349	2026-06-15 14:27:26.588554
+2224	2024-08-23	78.3	78.2	78.38	77.7	484085	2026-06-15 14:27:26.588554
+2225	2024-08-26	77.74	78.13	78.11	77.41	271576	2026-06-15 14:27:26.588554
+2226	2024-08-27	77.56	77.37	77.86	77.12	441303	2026-06-15 14:27:26.588554
+2227	2024-08-28	78.61	78.16	79.34	78.25	299434	2026-06-15 14:27:26.588554
+2228	2024-08-29	76.35	76.87	77.02	75.97	331494	2026-06-15 14:27:26.588554
+2229	2024-08-30	76.3	76.77	76.58	75.16	379529	2026-06-15 14:27:26.588554
+2230	2024-09-02	71.93	72.67	72.25	71.91	259583	2026-06-15 14:27:26.588554
+2231	2024-09-03	70.29	70.53	70.33	69.92	386149	2026-06-15 14:27:26.588554
+2232	2024-09-04	70.27	70.27	70.35	70.08	255577	2026-06-15 14:27:26.588554
+2233	2024-09-05	70.8	71.04	71.72	70.1	345119	2026-06-15 14:27:26.588554
+2234	2024-09-06	68.8	69.24	69.31	68.79	300755	2026-06-15 14:27:26.588554
+2235	2024-09-09	68.5	68.04	69.15	67.97	331110	2026-06-15 14:27:26.588554
+2236	2024-09-10	70.63	70.51	71.34	70.32	301360	2026-06-15 14:27:26.588554
+2237	2024-09-11	71.11	71.28	71.53	71.08	406323	2026-06-15 14:27:26.588554
+2238	2024-09-12	70.9	70.88	71.68	70.46	546952	2026-06-15 14:27:26.588554
+2239	2024-09-13	71.37	71.38	72.91	70.81	336322	2026-06-15 14:27:26.588554
+2240	2024-09-16	71.17	71.55	71.68	70.89	503608	2026-06-15 14:27:26.588554
+2241	2024-09-17	69.45	69.02	69.8	69.31	345419	2026-06-15 14:27:26.588554
+2242	2024-09-18	72.09	72.52	72.24	71.46	271602	2026-06-15 14:27:26.588554
+2243	2024-09-19	70.3	70.5	70.5	70.11	506210	2026-06-15 14:27:26.588554
+2244	2024-09-20	71.1	70.06	71.28	70.75	339846	2026-06-15 14:27:26.588554
+2245	2024-09-23	70.94	70.62	71.38	70.87	539962	2026-06-15 14:27:26.588554
+2246	2024-09-24	70.94	71.24	71.01	70.44	352499	2026-06-15 14:27:26.588554
+2247	2024-09-25	70.4	70.02	70.74	69.65	444716	2026-06-15 14:27:26.588554
+2248	2024-09-26	69.56	69.53	70.15	69.06	447327	2026-06-15 14:27:26.588554
+2249	2024-09-27	70.62	70.42	70.73	70.56	281673	2026-06-15 14:27:26.588554
+2250	2024-09-30	71.64	71.2	71.97	71.15	434100	2026-06-15 14:27:26.588554
+2251	2024-10-01	70.55	70.49	70.64	70.26	271058	2026-06-15 14:27:26.588554
+2252	2024-10-02	70.15	70.56	70.43	69.9	327597	2026-06-15 14:27:26.588554
+2253	2024-10-03	70.24	69.31	70.7	69.97	398620	2026-06-15 14:27:26.588554
+2254	2024-10-04	70.88	71.13	71.4	70.38	489967	2026-06-15 14:27:26.588554
+2255	2024-10-07	71.75	71.58	71.76	70.73	512911	2026-06-15 14:27:26.588554
+2256	2024-10-08	70.45	70.09	71.38	70.32	548818	2026-06-15 14:27:26.588554
+2257	2024-10-09	70.44	70.89	70.53	70.28	267194	2026-06-15 14:27:26.588554
+2258	2024-10-10	71.38	71.69	71.52	71.04	326298	2026-06-15 14:27:26.588554
+2259	2024-10-11	69.22	68.99	70.23	68.81	367116	2026-06-15 14:27:26.588554
+2260	2024-10-14	70.52	70.34	71.66	69.71	508970	2026-06-15 14:27:26.588554
+2261	2024-10-15	70.51	69.51	70.68	69.86	322361	2026-06-15 14:27:26.588554
+2262	2024-10-16	71.33	71.18	71.81	70.67	402647	2026-06-15 14:27:26.588554
+2263	2024-10-17	71.13	71.56	71.88	70.96	416862	2026-06-15 14:27:26.588554
+2264	2024-10-18	70.86	69.83	71.33	70.47	391041	2026-06-15 14:27:26.588554
+2265	2024-10-21	70.52	70.46	71.59	69.92	284160	2026-06-15 14:27:26.588554
+2266	2024-10-22	71.29	71.11	72.13	70.9	527749	2026-06-15 14:27:26.588554
+2267	2024-10-23	70.5	71.26	70.85	70.1	345335	2026-06-15 14:27:26.588554
+2268	2024-10-24	70.71	70.61	71.16	69.87	299402	2026-06-15 14:27:26.588554
+2269	2024-10-25	70.4	70.37	70.76	70.22	519754	2026-06-15 14:27:26.588554
+2270	2024-10-28	69.15	69.22	69.68	68.64	320246	2026-06-15 14:27:26.588554
+2271	2024-10-29	70.94	70.6	70.95	70.93	300468	2026-06-15 14:27:26.588554
+2272	2024-10-30	72	72.24	72.4	71.4	297599	2026-06-15 14:27:26.588554
+2273	2024-10-31	69.76	69.32	70.66	69.05	300390	2026-06-15 14:27:26.588554
+2274	2024-11-01	69.46	69.73	69.49	68.75	331199	2026-06-15 14:27:26.588554
+2275	2024-11-04	69.29	68.79	69.55	68.74	344968	2026-06-15 14:27:26.588554
+2276	2024-11-05	69.23	69.61	69.86	68.56	416393	2026-06-15 14:27:26.588554
+2277	2024-11-06	68.53	68.65	68.85	68.31	386260	2026-06-15 14:27:26.588554
+2278	2024-11-07	71.64	71.68	72.32	71.23	480246	2026-06-15 14:27:26.588554
+2279	2024-11-08	67.42	67.61	67.99	66.96	450065	2026-06-15 14:27:26.588554
+2280	2024-11-11	68.41	68.22	68.77	67.87	364176	2026-06-15 14:27:26.588554
+2281	2024-11-12	69.3	69.42	69.37	68.7	498178	2026-06-15 14:27:26.588554
+2282	2024-11-13	70.47	70.67	70.86	69.58	525381	2026-06-15 14:27:26.588554
+2283	2024-11-14	65.94	66.07	66.01	65.65	424001	2026-06-15 14:27:26.588554
+2284	2024-11-15	70.22	69.85	70.53	69.72	323705	2026-06-15 14:27:26.588554
+2285	2024-11-18	68.92	69.02	69.14	68.63	310091	2026-06-15 14:27:26.588554
+2286	2024-11-19	70.39	69.94	70.72	70.02	409912	2026-06-15 14:27:26.588554
+2287	2024-11-20	69.9	69.26	70.25	69.17	401611	2026-06-15 14:27:26.588554
+2288	2024-11-21	68.73	68.38	69.71	68.66	363396	2026-06-15 14:27:26.588554
+2289	2024-11-22	69.18	69.19	69.72	68.82	440861	2026-06-15 14:27:26.588554
+2290	2024-11-25	71.73	72.13	72.22	71.39	449121	2026-06-15 14:27:26.588554
+2291	2024-11-26	70.41	70.82	70.43	70.22	455728	2026-06-15 14:27:26.588554
+2292	2024-11-27	69.3	70.13	69.44	68.95	541736	2026-06-15 14:27:26.588554
+2293	2024-11-28	68.88	68.97	69.1	68.82	404841	2026-06-15 14:27:26.588554
+2294	2024-11-29	68.95	68.6	69.64	68.58	427145	2026-06-15 14:27:26.588554
+2295	2024-12-02	69.2	68.78	69.33	68.63	356410	2026-06-15 14:27:26.588554
+2296	2024-12-03	68.22	67.68	68.61	68.08	479016	2026-06-15 14:27:26.588554
+2297	2024-12-04	70.37	70.25	70.89	70.34	320400	2026-06-15 14:27:26.588554
+2298	2024-12-05	68.57	68.9	69.88	68.27	367369	2026-06-15 14:27:26.588554
+2299	2024-12-06	68.31	68	68.47	67.78	430109	2026-06-15 14:27:26.588554
+2300	2024-12-09	68.8	68.88	68.81	68.77	543151	2026-06-15 14:27:26.588554
+2301	2024-12-10	69.67	69.65	70.15	69.37	518137	2026-06-15 14:27:26.588554
+2302	2024-12-11	68.19	67.89	68.26	68.05	266138	2026-06-15 14:27:26.588554
+2303	2024-12-12	70.29	70.32	70.64	69.22	332315	2026-06-15 14:27:26.588554
+2304	2024-12-13	71.5	71.42	72.03	71.34	466682	2026-06-15 14:27:26.588554
+2305	2024-12-16	69.47	69.67	69.96	69.37	542441	2026-06-15 14:27:26.588554
+2306	2024-12-17	67.53	67.37	68.8	67.36	396429	2026-06-15 14:27:26.588554
+2307	2024-12-18	66.94	66.99	68.31	66.66	505678	2026-06-15 14:27:26.588554
+2308	2024-12-19	68.66	69.27	68.94	68.64	422106	2026-06-15 14:27:26.588554
+2309	2024-12-20	68.97	69.06	69.2	68.82	370811	2026-06-15 14:27:26.588554
+2310	2024-12-23	68.2	68.49	68.33	67.15	296737	2026-06-15 14:27:26.588554
+2311	2024-12-24	69.83	70.3	70.12	68.11	410355	2026-06-15 14:27:26.588554
+2312	2024-12-25	67.75	68.36	68.18	67.72	399725	2026-06-15 14:27:26.588554
+2313	2024-12-26	70.29	70.14	70.64	69.87	438644	2026-06-15 14:27:26.588554
+2314	2024-12-27	69.66	69.79	69.68	69.13	381627	2026-06-15 14:27:26.588554
+2315	2024-12-30	69.74	69.47	70.28	69.26	378041	2026-06-15 14:27:26.588554
+2316	2024-12-31	68.82	68.78	69.49	68.51	488185	2026-06-15 14:27:26.588554
+2317	2025-01-01	76.23	76.04	76.64	76.05	477655	2026-06-15 14:27:26.588554
+2318	2025-01-02	74.28	74.11	75.14	74.05	449591	2026-06-15 14:27:26.588554
+2319	2025-01-03	75.29	74.98	75.98	75.13	396161	2026-06-15 14:27:26.588554
+2320	2025-01-06	75.91	75.91	77.26	75.8	525307	2026-06-15 14:27:26.588554
+2321	2025-01-07	75.37	75.75	76.05	75.12	455671	2026-06-15 14:27:26.588554
+2322	2025-01-08	77.74	78.29	77.93	77.37	418751	2026-06-15 14:27:26.588554
+2323	2025-01-09	75.99	76.22	76.52	75.79	313079	2026-06-15 14:27:26.588554
+2324	2025-01-10	75.55	75.94	76.1	75.51	386213	2026-06-15 14:27:26.588554
+2325	2025-01-13	75.85	75.32	76.6	75.25	384365	2026-06-15 14:27:26.588554
+2326	2025-01-14	77.21	77.14	77.98	76.45	528763	2026-06-15 14:27:26.588554
+2327	2025-01-15	74.42	74.27	74.89	73.81	533774	2026-06-15 14:27:26.588554
+2328	2025-01-16	76.12	76.49	76.88	75.64	317359	2026-06-15 14:27:26.588554
+2329	2025-01-17	75.63	75.82	76.27	75.6	380466	2026-06-15 14:27:26.588554
+2330	2025-01-20	77	77.56	77.75	76.43	308645	2026-06-15 14:27:26.588554
+2331	2025-01-21	75.51	75.48	76.39	74.59	417973	2026-06-15 14:27:26.588554
+2332	2025-01-22	76.04	76.16	77.77	75.38	374277	2026-06-15 14:27:26.588554
+2333	2025-01-23	74.8	74.91	75.37	74.71	414244	2026-06-15 14:27:26.588554
+2334	2025-01-24	75.21	75.59	75.36	74.52	280348	2026-06-15 14:27:26.588554
+2335	2025-01-27	73.46	73.67	73.86	73.39	285851	2026-06-15 14:27:26.588554
+2336	2025-01-28	75.45	75.54	75.75	75.42	450867	2026-06-15 14:27:26.588554
+2337	2025-01-29	73.99	74.18	74.02	73.57	330771	2026-06-15 14:27:26.588554
+2338	2025-01-30	76.18	75.91	76.61	75.99	473077	2026-06-15 14:27:26.588554
+2339	2025-01-31	75.5	75.38	76.24	75.4	357338	2026-06-15 14:27:26.588554
+2340	2025-02-03	70.08	70.6	70.59	69.92	358775	2026-06-15 14:27:26.588554
+2341	2025-02-04	70.14	70.38	70.51	68.92	342091	2026-06-15 14:27:26.588554
+2342	2025-02-05	70.12	70.13	70.37	69.4	525478	2026-06-15 14:27:26.588554
+2343	2025-02-06	72	72.86	72.31	71.59	288744	2026-06-15 14:27:26.588554
+2344	2025-02-07	72.07	72.7	72.24	72.03	295117	2026-06-15 14:27:26.588554
+2345	2025-02-10	70.29	70.34	70.83	69.82	416490	2026-06-15 14:27:26.588554
+2346	2025-02-11	70.19	69.55	70.39	69.09	442154	2026-06-15 14:27:26.588554
+2347	2025-02-12	70.51	70.8	71.59	70.27	340365	2026-06-15 14:27:26.588554
+2348	2025-02-13	71.58	71.18	71.74	70.88	265540	2026-06-15 14:27:26.588554
+2349	2025-02-14	72.33	72.11	72.82	71.97	533126	2026-06-15 14:27:26.588554
+2350	2025-02-17	69.86	69.42	70.11	68.8	296936	2026-06-15 14:27:26.588554
+2351	2025-02-18	72.1	71.98	72.48	71.78	294194	2026-06-15 14:27:26.588554
+2352	2025-02-19	72.22	72.04	73.24	72.05	417567	2026-06-15 14:27:26.588554
+2353	2025-02-20	70.39	70.62	70.89	69.5	545305	2026-06-15 14:27:26.588554
+2354	2025-02-21	71.26	71.79	71.85	71.07	301990	2026-06-15 14:27:26.588554
+2355	2025-02-24	69.37	69.22	69.49	69.32	289601	2026-06-15 14:27:26.588554
+2356	2025-02-25	69.39	69.43	69.7	69.09	444672	2026-06-15 14:27:26.588554
+2357	2025-02-26	71.22	71.27	71.52	70.86	392012	2026-06-15 14:27:26.588554
+2358	2025-02-27	70.69	70.4	70.75	69.97	490491	2026-06-15 14:27:26.588554
+2359	2025-02-28	73.25	73.61	73.32	73.02	442317	2026-06-15 14:27:26.588554
+2360	2025-03-03	68.14	68.17	68.41	68	463678	2026-06-15 14:27:26.588554
+2361	2025-03-04	67.13	66.79	67.56	67.09	429412	2026-06-15 14:27:26.588554
+2362	2025-03-05	67.9	67.31	68.66	67.27	319893	2026-06-15 14:27:26.588554
+2363	2025-03-06	66.77	66.76	67.06	66.1	391707	2026-06-15 14:27:26.588554
+2364	2025-03-07	67.27	66.81	67.46	66.95	332212	2026-06-15 14:27:26.588554
+2365	2025-03-10	66.89	66.5	67.38	66.85	539372	2026-06-15 14:27:26.588554
+2366	2025-03-11	66.82	66.85	66.83	66.74	349862	2026-06-15 14:27:26.588554
+2367	2025-03-12	67.72	67.63	67.84	67.53	517553	2026-06-15 14:27:26.588554
+2368	2025-03-13	67.14	66.99	67.91	66.83	538102	2026-06-15 14:27:26.588554
+2369	2025-03-14	66.4	66.58	66.75	66.1	290524	2026-06-15 14:27:26.588554
+2370	2025-03-17	67.35	67.41	67.59	67.17	519388	2026-06-15 14:27:26.588554
+2371	2025-03-18	66.7	66.45	66.99	66.52	450658	2026-06-15 14:27:26.588554
+2372	2025-03-19	67.85	67.56	68.03	66.61	350025	2026-06-15 14:27:26.588554
+2373	2025-03-20	67.16	66.46	67.41	67.03	315480	2026-06-15 14:27:26.588554
+2374	2025-03-21	67.22	67.22	67.67	66.59	463083	2026-06-15 14:27:26.588554
+2375	2025-03-24	66.28	66.23	66.87	65.28	413522	2026-06-15 14:27:26.588554
+2376	2025-03-25	67.9	67.85	68.43	67.63	463596	2026-06-15 14:27:26.588554
+2377	2025-03-26	67.73	68.23	67.92	66.81	438929	2026-06-15 14:27:26.588554
+2378	2025-03-27	65.94	65.61	66.08	65.22	496476	2026-06-15 14:27:26.588554
+2379	2025-03-28	65.81	66.34	66.47	65.64	330141	2026-06-15 14:27:26.588554
+2380	2025-03-31	67.55	67.36	68.13	67.46	447127	2026-06-15 14:27:26.588554
+2381	2025-04-01	63.28	63.08	63.37	63.15	359101	2026-06-15 14:27:26.588554
+2382	2025-04-02	63.53	63.26	64	63.03	459272	2026-06-15 14:27:26.588554
+2383	2025-04-03	60.62	60.52	60.83	60.12	537714	2026-06-15 14:27:26.588554
+2384	2025-04-04	61.8	61.75	61.97	61.67	447008	2026-06-15 14:27:26.588554
+2385	2025-04-07	64.13	64.79	65.16	62.8	408058	2026-06-15 14:27:26.588554
+2386	2025-04-08	61.76	61.52	62.05	61.66	424469	2026-06-15 14:27:26.588554
+2387	2025-04-09	64.28	64.87	64.48	63.48	268482	2026-06-15 14:27:26.588554
+2388	2025-04-10	62.58	62.78	63.54	61.99	255435	2026-06-15 14:27:26.588554
+2389	2025-04-11	62.16	62.66	62.44	61.96	419251	2026-06-15 14:27:26.588554
+2390	2025-04-14	62.72	62.84	63.16	61.61	276751	2026-06-15 14:27:26.588554
+2391	2025-04-15	61	60.73	61.32	60.17	463262	2026-06-15 14:27:26.588554
+2392	2025-04-16	62.32	62.48	63.05	62.17	329468	2026-06-15 14:27:26.588554
+2393	2025-04-17	63.12	62.95	63.33	62.63	488634	2026-06-15 14:27:26.588554
+2394	2025-04-18	61.59	61.36	62.15	61.39	328113	2026-06-15 14:27:26.588554
+2395	2025-04-21	63.41	63.26	63.67	62.77	346651	2026-06-15 14:27:26.588554
+2396	2025-04-22	61.73	61.46	61.96	61.55	335283	2026-06-15 14:27:26.588554
+2397	2025-04-23	61.1	61.89	61.45	60.47	423805	2026-06-15 14:27:26.588554
+2398	2025-04-24	62.68	62.56	62.94	62.67	386016	2026-06-15 14:27:26.588554
+2399	2025-04-25	62.92	62.58	63.97	62.58	527919	2026-06-15 14:27:26.588554
+2400	2025-04-28	63.86	64.3	64.07	63.24	338697	2026-06-15 14:27:26.588554
+2401	2025-04-29	60.93	60.5	61.38	60.7	528637	2026-06-15 14:27:26.588554
+2402	2025-04-30	64.23	63.92	64.52	63.84	310107	2026-06-15 14:27:26.588554
+2403	2025-05-01	63.19	62.68	63.6	63.09	467984	2026-06-15 14:27:26.588554
+2404	2025-05-02	64.06	63.95	64.25	64.04	295853	2026-06-15 14:27:26.588554
+2405	2025-05-05	62.58	62.53	62.58	62.56	344244	2026-06-15 14:27:26.588554
+2406	2025-05-06	63.36	63.05	63.41	63.27	367752	2026-06-15 14:27:26.588554
+2407	2025-05-07	63.16	63.47	63.5	63.07	415486	2026-06-15 14:27:26.588554
+2408	2025-05-08	63.19	63.11	64.07	62.92	254331	2026-06-15 14:27:26.588554
+2409	2025-05-09	63.89	63.58	63.98	63.38	334667	2026-06-15 14:27:26.588554
+2410	2025-05-12	62.26	62.5	62.66	62.09	454335	2026-06-15 14:27:26.588554
+2411	2025-05-13	64.05	63.87	64.08	63.99	316354	2026-06-15 14:27:26.588554
+2412	2025-05-14	63.68	63.67	64.14	63.55	496889	2026-06-15 14:27:26.588554
+2413	2025-05-15	62.53	62.89	63.07	61.45	272419	2026-06-15 14:27:26.588554
+2414	2025-05-16	63.12	63.18	63.3	62.48	409413	2026-06-15 14:27:26.588554
+2415	2025-05-19	61.7	61.6	62.13	61.52	475121	2026-06-15 14:27:26.588554
+2416	2025-05-20	62.56	62.47	63.31	61.88	363096	2026-06-15 14:27:26.588554
+2417	2025-05-21	61.01	60.79	61.41	60.49	544366	2026-06-15 14:27:26.588554
+2418	2025-05-22	61.71	61.94	61.74	61.5	453990	2026-06-15 14:27:26.588554
+2419	2025-05-23	63.45	63.47	63.87	62.91	411792	2026-06-15 14:27:26.588554
+2420	2025-05-26	63.39	63.11	63.47	63.38	526999	2026-06-15 14:27:26.588554
+2421	2025-05-27	62.57	62.49	62.86	62.14	406810	2026-06-15 14:27:26.588554
+2665	2026-06-16	76.05000305175781	81.0999984741211	81.58000183105469	75.5199966430664	205050	2026-06-30 19:08:25.948501
+2666	2026-06-17	76.79000091552734	76.58999633789062	80.02999877929688	74.58999633789062	100474	2026-06-30 19:08:25.952359
+2667	2026-06-18	76.5999984741211	75.52999877929688	76.98999786376953	73.58000183105469	97813	2026-06-30 19:08:25.953401
+2668	2026-06-22	74.81999969482422	78.93000030517578	78.95999908447266	74.44999694824219	315903	2026-06-30 19:08:25.954015
+2669	2026-06-23	73.20999908447266	74.13999938964844	74.44999694824219	72.4800033569336	203509	2026-06-30 19:08:25.95472
+2670	2026-06-24	70.33999633789062	73.12999725341797	73.18000030517578	69.62999725341797	251403	2026-06-30 19:08:25.955747
+2671	2026-06-25	71.91999816894531	69.94999694824219	72.5	68.9000015258789	228065	2026-06-30 19:08:25.956967
+2672	2026-06-26	69.2300033569336	71.44000244140625	71.86000061035156	68.55999755859375	249316	2026-06-30 19:08:25.958095
+2673	2026-06-29	70.75	70.5	71.1500015258789	69.31999969482422	249316	2026-06-30 19:08:25.959206
+2674	2026-06-30	69.9800033569336	70.43000030517578	71.5999984741211	69.22000122070312	165104	2026-06-30 19:08:25.95995
+2925	2026-07-01	68.58000183105469	69.9800033569336	70.19000244140625	67.91999816894531	200004	2026-07-03 17:21:42.928766
+2926	2026-07-02	68.69000244140625	68.02999877929688	68.80000305175781	67.04000091552734	200004	2026-07-03 17:21:42.931197
+2927	2026-07-03	68.77999877929688	68.43000030517578	69.26000213623047	68.08000183105469	48758	2026-07-03 17:21:42.932032
+3178	2026-07-06	68.55999755859375	68.68000030517578	69.26000213623047	67.81999969482422	197452	2026-07-06 19:06:05.971309
+\.
+
+
+--
+-- Data for Name: wti_predictions; Type: TABLE DATA; Schema: public; Owner: -
+--
+
+COPY public.wti_predictions (id, created_at, target_month, predicted_avg, actual_avg, confidence_lower, confidence_upper, sarima_prediction, xgboost_prediction, lstm_prediction, weights, accuracy_pct) FROM stdin;
+\.
+
+
+--
+-- Name: fuel_prices_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.fuel_prices_id_seq', 309, true);
+
+
+--
+-- Name: news_cache_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.news_cache_id_seq', 33, true);
+
+
+--
+-- Name: predictions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.predictions_id_seq', 59, true);
+
+
+--
+-- Name: wti_daily_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.wti_daily_id_seq', 3178, true);
+
+
+--
+-- Name: wti_predictions_id_seq; Type: SEQUENCE SET; Schema: public; Owner: -
+--
+
+SELECT pg_catalog.setval('public.wti_predictions_id_seq', 1, false);
+
+
+--
+-- Name: fuel_prices fuel_prices_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fuel_prices
+    ADD CONSTRAINT fuel_prices_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: news_cache news_cache_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_cache
+    ADD CONSTRAINT news_cache_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: news_cache news_cache_url_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.news_cache
+    ADD CONSTRAINT news_cache_url_key UNIQUE (url);
+
+
+--
+-- Name: predictions predictions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.predictions
+    ADD CONSTRAINT predictions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: fuel_prices uq_fuel_price_date_type; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.fuel_prices
+    ADD CONSTRAINT uq_fuel_price_date_type UNIQUE (date, fuel_type);
+
+
+--
+-- Name: wti_daily wti_daily_date_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wti_daily
+    ADD CONSTRAINT wti_daily_date_key UNIQUE (date);
+
+
+--
+-- Name: wti_daily wti_daily_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wti_daily
+    ADD CONSTRAINT wti_daily_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: wti_predictions wti_predictions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.wti_predictions
+    ADD CONSTRAINT wti_predictions_pkey PRIMARY KEY (id);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+\unrestrict bj6I2nfuDD9kaL52QJm3sic0whbdXY7yEAl5Zun0pUVgzCXKR4LsS7usGAZEBYB
+

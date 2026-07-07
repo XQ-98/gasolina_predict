@@ -53,6 +53,31 @@ def _get_current_price(fuel_type: str) -> float:
     return data["fuels"].get(fuel_type, {}).get("price", 2.89)
 
 
+def _get_derivative_price(fuel_type: str) -> dict:
+    """Obtiene el precio del derivado refinado real para la formula Decreto 308.
+
+    Para gasolina (extra/ecopais/super_95): usa RBOB USGC (RB=F).
+    Para diesel: usa ULSD USGC (HO=F).
+    Promedio de los ultimos 20 registros disponibles, igual que Platts.
+
+    Returns:
+        Dict con 'price' (float en $/galon), 'source' y 'ticker'.
+    """
+    try:
+        from app.services.derivative_fetcher import fetch_derivative_prices
+        deriv = fetch_derivative_prices()
+        if fuel_type in ("extra", "ecopais", "super_95"):
+            price = deriv["rbob_avg_20"]
+            ticker = "RB=F (RBOB)"
+        else:
+            price = deriv["ulsd_avg_20"]
+            ticker = "HO=F (ULSD)"
+        return {"price": price, "source": deriv["source"], "ticker": ticker}
+    except Exception as e:
+        logger.warning("No se pudo obtener precio de derivado: %s. Usando WTI como proxy.", e)
+        return {"price": None, "source": "unavailable", "ticker": None}
+
+
 class TwoLayerPredictor:
     """Predictor de 2 capas: WTI diario -> Formula gobierno -> Banda de precios.
 
@@ -102,19 +127,26 @@ class TwoLayerPredictor:
         wti_price: float,
         current_fuel_price: float,
         fuel_type: str,
+        derivative_price: float = None,
     ) -> dict:
-        """Convierte un precio WTI en precio final de combustible aplicando formula y banda.
+        """Convierte precio de referencia en precio final de combustible aplicando formula y banda.
+
+        Usa el derivado refinado (RBOB/ULSD) si esta disponible — es el indicador
+        real del Decreto 308. Si no, usa WTI crudo como proxy.
 
         Args:
-            wti_price: Precio del WTI en USD/barril.
+            wti_price: Precio del WTI en USD/barril (proxy o para Super 95).
             current_fuel_price: Precio vigente del combustible (base para la banda).
             fuel_type: Tipo de combustible (extra, ecopais, super_95, diesel).
+            derivative_price: Precio RBOB o ULSD Platts USGC en $/galon (opcional).
 
         Returns:
             Dict con precio final, estado de banda, precio teorico, limites y desglose.
         """
         # Formula del gobierno -> precio teorico
-        theoretical_price = self._band_calc.calculate_theoretical_price(wti_price, fuel_type)
+        theoretical_price = self._band_calc.calculate_theoretical_price(
+            wti_price, fuel_type, derivative_price=derivative_price
+        )
 
         # Aplicar banda asimetrica
         band_result = self._band_calc.apply_band(current_fuel_price, theoretical_price, fuel_type)
@@ -131,6 +163,7 @@ class TwoLayerPredictor:
             "min_price": band_result["min_price"],
             "change_pct": band_result["change_pct"],
             "wti_used": round(wti_price, 2),
+            "derivative_used": round(derivative_price, 4) if derivative_price else None,
             "formula_breakdown": breakdown,
         }
 
@@ -158,7 +191,11 @@ class TwoLayerPredictor:
         # Precio actual del combustible (BD primero, luego pipeline)
         current_price = _get_current_price(fuel_type)
 
-        # Capa 1: Predecir WTI
+        # Obtener precio de derivados refinados (indicador real Decreto 308)
+        derivative_info = _get_derivative_price(fuel_type)
+        derivative_price = derivative_info.get("price")
+
+        # Capa 1: Predecir WTI (sigue siendo util para Super 95 y como referencia)
         self._ensure_trained()
         wti_result = self._wti_predictor.predict_wti_avg_for_next_month()
 
@@ -166,12 +203,12 @@ class TwoLayerPredictor:
         wti_lower = wti_result.get("confidence_interval", {}).get("lower", wti_avg * 0.95)
         wti_upper = wti_result.get("confidence_interval", {}).get("upper", wti_avg * 1.05)
 
-        # Capa 2: Formula del gobierno + banda
-        fuel_result = self._wti_to_fuel_price(wti_avg, current_price, fuel_type)
+        # Capa 2: Formula del gobierno + banda (con derivado si disponible)
+        fuel_result = self._wti_to_fuel_price(wti_avg, current_price, fuel_type, derivative_price)
 
         # Intervalos de confianza del precio final usando bounds del WTI
-        fuel_lower = self._wti_to_fuel_price(wti_lower, current_price, fuel_type)
-        fuel_upper = self._wti_to_fuel_price(wti_upper, current_price, fuel_type)
+        fuel_lower = self._wti_to_fuel_price(wti_lower, current_price, fuel_type, derivative_price)
+        fuel_upper = self._wti_to_fuel_price(wti_upper, current_price, fuel_type, derivative_price)
 
         # Fecha del proximo dia 12 (vigencia del nuevo precio)
         today = date.today()
@@ -196,6 +233,7 @@ class TwoLayerPredictor:
             "band_status": fuel_result["band_status"],
             "max_price": fuel_result["max_price"],
             "min_price": fuel_result["min_price"],
+            "derivative_indicator": derivative_info,
             "layer_1_wti": wti_result,
             "layer_2_formula": fuel_result["formula_breakdown"],
             "confidence_interval": {
@@ -231,6 +269,10 @@ class TwoLayerPredictor:
 
         # Precio actual del combustible (BD primero, luego pipeline)
         current_price = _get_current_price(fuel_type)
+
+        # Obtener precio de derivados refinados (indicador real Decreto 308)
+        derivative_info = _get_derivative_price(fuel_type)
+        derivative_price = derivative_info.get("price")
 
         # Capa 1: Predecir WTI del primer mes
         self._ensure_trained()
@@ -285,15 +327,17 @@ class TwoLayerPredictor:
                 wti_predictions.append(max(extrapolated, 10.0))
 
         # Capa 2: Aplicar formula y banda SECUENCIALMENTE
+        # Mes 1: usa derivado Platts real si disponible (mas preciso)
+        # Meses 2+: usa WTI extrapolado porque no hay Platts futuro disponible
         prev_price = current_price
         monthly_results = []
 
         for m in range(months):
+            deriv = derivative_price if m == 0 else None
             fuel_result = self._wti_to_fuel_price(
-                wti_predictions[m], prev_price, fuel_type,
+                wti_predictions[m], prev_price, fuel_type, deriv,
             )
             monthly_results.append(fuel_result)
-            # El precio ajustado por banda es el current_price del mes siguiente
             prev_price = fuel_result["price"]
 
         # Generar fechas futuras (dia 11 de cada mes siguiente)

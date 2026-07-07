@@ -7,7 +7,7 @@ class Settings(BaseModel):
     """Configuracion de la aplicacion."""
 
     APP_NAME: str = "GasPredict Ecuador"
-    APP_VERSION: str = "1.1.0"
+    APP_VERSION: str = "1.2.0"
 
     # Tickers de Yahoo Finance
     WTI_TICKER: str = "CL=F"              # Crudo WTI

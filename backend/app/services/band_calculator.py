@@ -30,25 +30,38 @@ def _months_since_base(d: date = None) -> int:
 class BandCalculator:
     """Implementa la logica del Decreto 308 - Sistema de bandas de precios."""
 
-    def calculate_theoretical_price(self, wti_price: float, fuel_type: str) -> float:
-        """Calcula el precio teorico basado en el WTI y la formula del gobierno.
+    def calculate_theoretical_price(
+        self,
+        wti_price: float,
+        fuel_type: str,
+        derivative_price: float = None,
+    ) -> float:
+        """Calcula el precio teorico basado en la formula del gobierno.
 
-        Para Extra, EcoPais y Diesel usa la formula del Decreto 308.
-        Para Super 95 usa un modelo cuadratico calibrado con datos reales,
-        ya que tiene precio libre y las comercializadoras lo fijan segun mercado.
+        Orden de prioridad:
+          1. Si se provee derivative_price (RBOB/ULSD Platts USGC en $/galon),
+             lo usa directamente — es el indicador real del Decreto 308.
+          2. Si no, usa WTI crudo como proxy (menos preciso).
+
+        Para Super 95 (precio libre) siempre usa el modelo hibrido WTI+tendencia.
 
         Args:
-            wti_price: Precio del WTI en USD/barril.
+            wti_price: Precio del WTI en USD/barril (proxy si no hay derivado).
             fuel_type: Tipo de combustible (extra, ecopais, super_95, diesel).
+            derivative_price: Precio RBOB o ULSD Platts USGC en $/galon (opcional).
 
         Returns:
             Precio teorico en USD/galon.
         """
-        # Super 95: modelo cuadratico (precio libre, no usa Decreto 308)
+        # Super 95: precio libre, usa modelo hibrido WTI + tendencia temporal
         if fuel_type == "super_95":
             return self._calculate_super95_price(wti_price)
 
-        # Extra, EcoPais, Diesel: formula del Decreto 308
+        # Extra, EcoPais, Diesel: usar derivado Platts si esta disponible
+        if derivative_price and derivative_price > 0:
+            return self._calculate_decree308_from_derivative(derivative_price, fuel_type)
+
+        # Fallback: usar WTI crudo como proxy (comportamiento anterior)
         return self._calculate_decree308_price(wti_price, fuel_type)
 
     def _calculate_super95_price(self, wti_price: float, target_month_offset: int = 1) -> float:
@@ -68,8 +81,60 @@ class BandCalculator:
         )
         return round(max(price, 1.50), 3)
 
+    def _calculate_decree308_from_derivative(self, pm_usgc: float, fuel_type: str) -> float:
+        """Formula del Decreto 308 usando el marcador Platts USGC directamente.
+
+        Este es el metodo correcto segun la regulacion: el indicador de referencia
+        es el precio del derivado refinado en la Costa del Golfo (RBOB para gasolina,
+        ULSD para diesel), no el WTI crudo.
+
+        Formula:
+          PPIn = PM_ajustado_calidad + Flete_USGC_Ecuador + Seguro(0.05%) + CK(10.78%) + Tarifa
+          Precio_final = (PPIn) * (1 + IVA_15%) + Margen_comercializacion * (1 + IVA_15%)
+
+        Args:
+            pm_usgc: Precio Platts USGC en $/galon (RBOB o ULSD, promedio 20 registros).
+            fuel_type: Tipo de combustible para ajuste de calidad.
+
+        Returns:
+            Precio teorico final al consumidor en $/galon.
+        """
+        from app.services.derivative_fetcher import (
+            OCTANE_QUALITY_FACTOR, FLETE_USD_GAL, SEGURO_RATE,
+            CAPITAL_COST_RATE, TARIFA_ARCH_GAL,
+        )
+
+        # 1. Ajuste calidad (octanaje)
+        quality_factor = OCTANE_QUALITY_FACTOR.get(fuel_type, 1.0)
+        pm_adjusted = pm_usgc * quality_factor
+
+        # 2. Flete y seguro
+        flete = FLETE_USD_GAL
+        seguro = (pm_adjusted + flete) * SEGURO_RATE
+        cif = pm_adjusted + flete + seguro
+
+        # 3. Costo de capital 10.78%
+        capital_cost = cif * CAPITAL_COST_RATE
+
+        # 4. Tarifa infraestructura ARCH
+        tarifa = TARIFA_ARCH_GAL
+
+        # 5. Precio en terminal antes de IVA
+        terminal_pre_iva = cif + capital_cost + tarifa
+
+        # 6. IVA 15%
+        iva = terminal_pre_iva * settings.IVA_RATE
+        terminal_con_iva = terminal_pre_iva + iva
+
+        # 7. Margen de comercializacion + IVA
+        commercial_margin = settings.COMMERCIAL_MARGIN
+        commercial_margin_iva = commercial_margin * settings.IVA_RATE
+
+        precio_final = terminal_con_iva + commercial_margin + commercial_margin_iva
+        return round(max(precio_final, 0.50), 3)
+
     def _calculate_decree308_price(self, wti_price: float, fuel_type: str) -> float:
-        """Formula del Decreto 308 para combustibles regulados."""
+        """Formula del Decreto 308 para combustibles regulados (usando WTI como proxy)."""
         # 1. Costo de importacion base: WTI ($/barril) -> $/galon
         import_cost_gallon = wti_price * settings.WTI_TO_GALLON_FACTOR * settings.IMPORT_COST_WEIGHT
 

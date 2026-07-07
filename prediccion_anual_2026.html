@@ -1,0 +1,957 @@
+<title>Predicción Combustibles Ecuador 2026</title>
+<style>
+  :root {
+    --bg:        #0D1B2A;
+    --surface:   #132236;
+    --surface2:  #1A2E47;
+    --border:    #1E3A5A;
+    --text:      #E2EAF4;
+    --muted:     #7A9BBF;
+    --amber:     #F59E0B;
+    --amber-dim: #92600A;
+    --green:     #10B981;
+    --red:       #EF4444;
+    --blue:      #3B82F6;
+    --ceiling:   #F59E0B;
+    --within:    #10B981;
+    --floor:     #3B82F6;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg:        #F0F4F9;
+      --surface:   #FFFFFF;
+      --surface2:  #E8EFF7;
+      --border:    #C8D8EA;
+      --text:      #0D1B2A;
+      --muted:     #4A6A8A;
+      --amber:     #D97706;
+      --amber-dim: #FEF3C7;
+      --green:     #059669;
+      --red:       #DC2626;
+      --blue:      #2563EB;
+    }
+  }
+  :root[data-theme="light"] {
+    --bg:        #F0F4F9;
+    --surface:   #FFFFFF;
+    --surface2:  #E8EFF7;
+    --border:    #C8D8EA;
+    --text:      #0D1B2A;
+    --muted:     #4A6A8A;
+    --amber:     #D97706;
+    --amber-dim: #FEF3C7;
+    --green:     #059669;
+    --red:       #DC2626;
+    --blue:      #2563EB;
+  }
+  :root[data-theme="dark"] {
+    --bg:        #0D1B2A;
+    --surface:   #132236;
+    --surface2:  #1A2E47;
+    --border:    #1E3A5A;
+    --text:      #E2EAF4;
+    --muted:     #7A9BBF;
+    --amber:     #F59E0B;
+    --amber-dim: #92600A;
+    --green:     #10B981;
+    --red:       #EF4444;
+    --blue:      #3B82F6;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    font-size: 15px;
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 0 0 48px;
+  }
+
+  /* HEADER */
+  .header {
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 28px 32px 24px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  .header-left { display: flex; flex-direction: column; gap: 4px; }
+  .eyebrow {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--amber);
+  }
+  h1 {
+    font-size: clamp(22px, 4vw, 32px);
+    font-weight: 700;
+    color: var(--text);
+    text-wrap: balance;
+    line-height: 1.2;
+  }
+  .subtitle {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+  .theme-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 6px 12px;
+    font-size: 12px;
+    cursor: pointer;
+    transition: color 0.15s;
+    white-space: nowrap;
+    align-self: flex-start;
+  }
+  .theme-btn:hover { color: var(--text); }
+
+  /* MAIN */
+  .main { max-width: 1100px; margin: 0 auto; padding: 32px 24px 0; display: flex; flex-direction: column; gap: 28px; }
+
+  /* SUPUESTOS */
+  .assumptions {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--amber);
+    border-radius: 8px;
+    padding: 16px 20px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px 24px;
+  }
+  .assumption-item { display: flex; flex-direction: column; gap: 2px; }
+  .assumption-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .assumption-value { font-size: 14px; color: var(--text); font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* KPIs */
+  .kpis {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px;
+  }
+  .kpi {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 18px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .kpi-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; font-weight: 600; }
+  .kpi-value { font-size: 26px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .kpi-sub { font-size: 12px; color: var(--muted); }
+  .up { color: var(--red); }
+  .down { color: var(--green); }
+  .neutral { color: var(--muted); }
+
+  /* CHART */
+  .chart-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 24px;
+  }
+  .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .chart-title { font-size: 15px; font-weight: 600; color: var(--text); }
+  .legend {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .legend-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  canvas { width: 100% !important; }
+
+  /* FUEL TABS */
+  .fuel-tabs {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 16px;
+  }
+  .fuel-tab {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    border-radius: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .fuel-tab:hover { color: var(--text); border-color: var(--amber); }
+  .fuel-tab.active {
+    background: var(--amber);
+    border-color: var(--amber);
+    color: #0D1B2A;
+    font-weight: 700;
+  }
+
+  /* TABLE */
+  .table-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .table-title {
+    padding: 16px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+  }
+  .table-wrap { overflow-x: auto; }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    font-variant-numeric: tabular-nums;
+  }
+  th {
+    text-align: left;
+    padding: 10px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--muted);
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  td {
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    white-space: nowrap;
+  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--surface2); }
+  .td-month { font-weight: 600; }
+  .td-actual { color: var(--muted); font-style: italic; }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+  }
+  .badge-techo { background: rgba(245,158,11,0.15); color: var(--amber); }
+  .badge-dentro { background: rgba(16,185,129,0.12); color: var(--green); }
+  .badge-piso { background: rgba(59,130,246,0.12); color: var(--blue); }
+  .badge-libre { background: rgba(148,163,184,0.12); color: var(--muted); }
+
+  .chg-up { color: var(--red); font-weight: 600; }
+  .chg-dn { color: var(--green); font-weight: 600; }
+  .chg-0  { color: var(--muted); }
+
+  /* ESCENARIOS */
+  .scenarios {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+  .scenario-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .scenario-name { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; }
+  .scenario-price { font-size: 28px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .scenario-desc { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .scenario-driver { font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); padding-top: 8px; margin-top: 2px; }
+
+  .scenario-alcista { border-top: 3px solid var(--red); }
+  .scenario-base    { border-top: 3px solid var(--amber); }
+  .scenario-bajista { border-top: 3px solid var(--green); }
+
+  .note {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 14px 18px;
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+  .note strong { color: var(--text); }
+
+  @media (max-width: 600px) {
+    .header { padding: 20px 16px; }
+    .main { padding: 20px 16px 0; }
+  }
+</style>
+
+<div class="header">
+  <div class="header-left">
+    <span class="eyebrow">GasPredict Ecuador · Decreto 308</span>
+    <h1>Predicción de Combustibles<br>julio → diciembre 2026</h1>
+    <p class="subtitle">Indicador: RBOB/ULSD Platts USGC · Sistema de bandas +5% / −10% · Precios en USD/galón</p>
+  </div>
+  <button class="theme-btn" onclick="toggleTheme()">☀ / ☾ Tema</button>
+</div>
+
+<div class="main">
+
+  <!-- SUPUESTOS -->
+  <div class="assumptions">
+    <div class="assumption-item">
+      <span class="assumption-label">RBOB actual (jul 7)</span>
+      <span class="assumption-value">$3.02 / gal</span>
+    </div>
+    <div class="assumption-item">
+      <span class="assumption-label">ULSD actual (jul 7)</span>
+      <span class="assumption-value">$3.21 / gal</span>
+    </div>
+    <div class="assumption-item">
+      <span class="assumption-label">WTI actual</span>
+      <span class="assumption-value">~$69 / barril</span>
+    </div>
+    <div class="assumption-item">
+      <span class="assumption-label">Brent proyectado Q3</span>
+      <span class="assumption-value">$74 / barril (EIA)</span>
+    </div>
+    <div class="assumption-item">
+      <span class="assumption-label">Banda máxima subida</span>
+      <span class="assumption-value">+5 % mensual</span>
+    </div>
+    <div class="assumption-item">
+      <span class="assumption-label">Banda máxima bajada</span>
+      <span class="assumption-value">−10 % mensual</span>
+    </div>
+  </div>
+
+  <!-- KPIs resumen -->
+  <div class="kpis" id="kpis-extra">
+    <div class="kpi">
+      <span class="kpi-label">Precio actual (jun 12)</span>
+      <span class="kpi-value">$3.312</span>
+      <span class="kpi-sub">Extra / EcoPaís</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Proyección julio 12</span>
+      <span class="kpi-value up">$3.478</span>
+      <span class="kpi-sub">+5.0 % TECHO</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Proyección dic 12 (base)</span>
+      <span class="kpi-value down">$3.283</span>
+      <span class="kpi-sub">−5.6 % vs hoy</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Variación total H2 2026</span>
+      <span class="kpi-value neutral">−$0.03</span>
+      <span class="kpi-sub">Escenario base (subida → bajada)</span>
+    </div>
+  </div>
+
+  <!-- TABS + CHART -->
+  <div class="chart-card">
+    <div class="fuel-tabs">
+      <button class="fuel-tab active" onclick="setFuel('extra')">Extra / EcoPaís</button>
+      <button class="fuel-tab" onclick="setFuel('diesel')">Diésel</button>
+      <button class="fuel-tab" onclick="setFuel('super')">Súper 95</button>
+    </div>
+    <div class="chart-header">
+      <span class="chart-title" id="chart-title">Extra / EcoPaís — Escenario base</span>
+      <div class="legend">
+        <div class="legend-item"><div class="legend-dot" style="background:#F59E0B"></div>Escenario alcista</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#3B82F6"></div>Escenario base</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#10B981"></div>Escenario bajista</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#94A3B8;opacity:0.6"></div>Histórico 2026</div>
+      </div>
+    </div>
+    <canvas id="chart" height="320"></canvas>
+  </div>
+
+  <!-- TABLA DETALLADA -->
+  <div class="table-card">
+    <div class="table-title" id="table-title">Detalle mensual — Extra / EcoPaís</div>
+    <div class="table-wrap">
+      <table id="detail-table">
+        <thead>
+          <tr>
+            <th>Mes (vigencia desde)</th>
+            <th>RBOB / ULSD Platts</th>
+            <th>Precio teórico</th>
+            <th>Precio final</th>
+            <th>Cambio vs anterior</th>
+            <th>Banda</th>
+            <th>Subsidio est.</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ESCENARIOS FIN DE AÑO -->
+  <div>
+    <div class="table-title" style="padding:0 0 14px;background:none;border:none;font-size:15px;font-weight:700;">Escenarios para diciembre 2026</div>
+    <div class="scenarios">
+      <div class="scenario-card scenario-alcista">
+        <span class="scenario-name" style="color:var(--red)">⬆ Alcista</span>
+        <span class="scenario-price up" id="sc-up-extra">$3.654</span>
+        <span class="scenario-desc">Reapertura parcial del Estrecho de Ormuz falla, tensiones Iran-Israel escalan. RBOB vuelve a $3.40+/gal. Ecuador aplica TECHO 5 meses consecutivos.</span>
+        <span class="scenario-driver">Driver: conflicto geopolítico sostenido · WTI regresa a $90+</span>
+      </div>
+      <div class="scenario-card scenario-base">
+        <span class="scenario-name" style="color:var(--amber)">➡ Base</span>
+        <span class="scenario-price" style="color:var(--amber)" id="sc-base-extra">$3.283</span>
+        <span class="scenario-desc">RBOB baja gradualmente a $2.70-2.80/gal con WTI en $66-74. El gobierno aplica TECHO en julio y DENTRO o leves bajas en el resto del año.</span>
+        <span class="scenario-driver">Driver: EIA STEO julio 2026 · Brent Q3=$74, Q4 bajando</span>
+      </div>
+      <div class="scenario-card scenario-bajista">
+        <span class="scenario-name" style="color:var(--green)">⬇ Bajista</span>
+        <span class="scenario-price down" id="sc-dn-extra">$2.979</span>
+        <span class="scenario-desc">OPEP+ eleva producción agresivamente. Citi proyecta Brent a $60 fin 2026. RBOB cae a $2.40-2.50/gal. Ecuador aplica bajas de 5-8% por varios meses.</span>
+        <span class="scenario-driver">Driver: Sobreoferta OPEP+ · Citigroup proyección Brent $60</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <strong>Metodología:</strong> Indicador de referencia = Platts USGC (RBOB para gasolina, ULSD para diésel), promedio últimos 20 registros disponibles, según Reglamento Codificado de Precios (Decreto 308).
+    Fórmula: PPIn = PM_USGC_ajustado + Flete ($0.085/gal) + Seguro (0.05%) + Capital (10.78%) + Tarifa ARCH + IVA 15% + Margen comercial.
+    Proyecciones RBOB/ULSD derivadas de curva forward de futuros NYMEX y STEO julio 2026 de la EIA.
+    Este análisis es informativo · No constituye asesoramiento financiero.
+  </div>
+
+</div>
+
+<script>
+// ─── DATOS ───────────────────────────────────────────────────────────────────
+
+const HISTORICO = [
+  { mes: "Ene 12",  extra: 2.670, diesel: 2.610, super: 4.200 },
+  { mes: "Feb 12",  extra: 2.760, diesel: 2.710, super: 4.350 },
+  { mes: "Mar 12",  extra: 2.891, diesel: 2.828, super: 4.550 },
+  { mes: "Abr 12",  extra: 3.024, diesel: 2.972, super: 4.780 },
+  { mes: "May 12",  extra: 3.164, diesel: 3.100, super: 5.200 },
+  { mes: "Jun 12",  extra: 3.312, diesel: 3.251, super: 5.700 },
+];
+
+// Escenarios proyectados: [alcista, base, bajista]
+// Extra/EcoPaís
+const PROYECCION = {
+  extra: {
+    // mes, rbob_base, teorico_base, [alcista, base, bajista], banda_base
+    meses: [
+      { mes:"Jul 12", rbob:3.020, teorico_b:3.62, al:3.478, ba:3.478, bj:3.313, banda_b:"TECHO", subsidio_b:0.142 },
+      { mes:"Ago 12", rbob:2.900, teorico_b:3.50, al:3.478, ba:3.380, bj:3.150, banda_b:"TECHO", subsidio_b:0.120 },
+      { mes:"Sep 12", rbob:2.780, teorico_b:3.36, al:3.430, ba:3.283, bj:2.975, banda_b:"DENTRO",subsidio_b:0.077 },
+      { mes:"Oct 12", rbob:2.700, teorico_b:3.27, al:3.430, ba:3.200, bj:2.826, banda_b:"DENTRO",subsidio_b:0.070 },
+      { mes:"Nov 12", rbob:2.640, teorico_b:3.21, al:3.530, ba:3.130, bj:2.800, banda_b:"DENTRO",subsidio_b:0.080 },
+      { mes:"Dic 12", rbob:2.580, teorico_b:3.14, al:3.654, ba:3.060, bj:2.680, banda_b:"DENTRO",subsidio_b:0.060 },
+    ],
+  },
+  diesel: {
+    meses: [
+      { mes:"Jul 12", rbob:3.210, teorico_b:3.79, al:3.413, ba:3.413, bj:3.251, banda_b:"TECHO", subsidio_b:0.377 },
+      { mes:"Ago 12", rbob:3.050, teorico_b:3.61, al:3.413, ba:3.320, bj:3.079, banda_b:"TECHO", subsidio_b:0.290 },
+      { mes:"Sep 12", rbob:2.920, teorico_b:3.47, al:3.360, ba:3.220, bj:2.900, banda_b:"DENTRO",subsidio_b:0.247 },
+      { mes:"Oct 12", rbob:2.820, teorico_b:3.36, al:3.320, ba:3.130, bj:2.754, banda_b:"DENTRO",subsidio_b:0.230 },
+      { mes:"Nov 12", rbob:2.750, teorico_b:3.29, al:3.420, ba:3.060, bj:2.680, banda_b:"DENTRO",subsidio_b:0.229 },
+      { mes:"Dic 12", rbob:2.700, teorico_b:3.23, al:3.540, ba:2.990, bj:2.610, banda_b:"DENTRO",subsidio_b:0.240 },
+    ],
+  },
+  super: {
+    meses: [
+      { mes:"Jul 12", rbob:3.020, teorico_b:5.42, al:5.700, ba:5.420, bj:5.130, banda_b:"LIBRE",  subsidio_b:0 },
+      { mes:"Ago 12", rbob:2.900, teorico_b:5.26, al:5.600, ba:5.260, bj:4.900, banda_b:"LIBRE",  subsidio_b:0 },
+      { mes:"Sep 12", rbob:2.780, teorico_b:5.10, al:5.520, ba:5.100, bj:4.670, banda_b:"LIBRE",  subsidio_b:0 },
+      { mes:"Oct 12", rbob:2.700, teorico_b:4.97, al:5.480, ba:4.970, bj:4.490, banda_b:"LIBRE",  subsidio_b:0 },
+      { mes:"Nov 12", rbob:2.640, teorico_b:4.86, al:5.550, ba:4.860, bj:4.350, banda_b:"LIBRE",  subsidio_b:0 },
+      { mes:"Dic 12", rbob:2.580, teorico_b:4.74, al:5.680, ba:4.740, bj:4.200, banda_b:"LIBRE",  subsidio_b:0 },
+    ],
+  },
+};
+
+// ─── ESTADO ──────────────────────────────────────────────────────────────────
+let currentFuel = "extra";
+let chartInstance = null;
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+function bandaBadge(b) {
+  if (b === "TECHO")  return `<span class="badge badge-techo">↑ TECHO</span>`;
+  if (b === "DENTRO") return `<span class="badge badge-dentro">● DENTRO</span>`;
+  if (b === "PISO")   return `<span class="badge badge-piso">↓ PISO</span>`;
+  return `<span class="badge badge-libre">LIBRE</span>`;
+}
+
+function changePct(curr, prev) {
+  if (!prev) return "";
+  const pct = ((curr - prev) / prev * 100);
+  const sign = pct > 0 ? "+" : "";
+  const cls = pct > 0.01 ? "chg-up" : pct < -0.01 ? "chg-dn" : "chg-0";
+  return `<span class="${cls}">${sign}${pct.toFixed(2)}%</span>`;
+}
+
+function renderTable(fuel) {
+  const hist = HISTORICO;
+  const proj = PROYECCION[fuel].meses;
+  const tbody = document.getElementById("tbody");
+  let rows = "";
+
+  // Histórico (últimos 3 meses como referencia)
+  const histShow = hist.slice(-3);
+  for (let i = 0; i < histShow.length; i++) {
+    const h = histShow[i];
+    const prev = i > 0 ? histShow[i-1][fuel] : (hist[hist.length - histShow.length - 1]?.[fuel] || null);
+    const price = h[fuel];
+    rows += `<tr>
+      <td class="td-month">${h.mes}</td>
+      <td class="td-actual">—</td>
+      <td class="td-actual">—</td>
+      <td class="td-actual">$${price.toFixed(3)}</td>
+      <td>${prev ? changePct(price, prev) : "—"}</td>
+      <td>${fuel === "super" ? bandaBadge("LIBRE") : bandaBadge("TECHO")}</td>
+      <td class="td-actual">—</td>
+    </tr>`;
+  }
+
+  // Proyectados
+  let prevPrice = hist[hist.length - 1][fuel];
+  for (const p of proj) {
+    const precio = p.ba;
+    const rbobLabel = fuel === "diesel" ? `$${p.rbob.toFixed(3)} ULSD` : `$${p.rbob.toFixed(3)} RBOB`;
+    rows += `<tr>
+      <td class="td-month">${p.mes} <span style="font-size:11px;color:var(--amber);font-weight:600">(proyectado)</span></td>
+      <td>$${p.rbob.toFixed(3)} ${fuel==="diesel"?"ULSD":"RBOB"}</td>
+      <td>$${p.teorico_b.toFixed(3)}</td>
+      <td style="font-weight:600">$${precio.toFixed(3)}</td>
+      <td>${changePct(precio, prevPrice)}</td>
+      <td>${bandaBadge(p.banda_b)}</td>
+      <td>${p.subsidio_b > 0 ? "$" + p.subsidio_b.toFixed(3) + "/gal" : "—"}</td>
+    </tr>`;
+    prevPrice = precio;
+  }
+
+  tbody.innerHTML = rows;
+  document.getElementById("table-title").textContent =
+    `Detalle mensual — ${fuel === "extra" ? "Extra / EcoPaís" : fuel === "diesel" ? "Diésel Premium" : "Súper 95"}`;
+}
+
+function getStyle(varName) {
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim();
+}
+
+function renderChart(fuel) {
+  const hist = HISTORICO;
+  const proj = PROYECCION[fuel].meses;
+
+  const histLabels = hist.map(h => h.mes);
+  const histVals   = hist.map(h => h[fuel]);
+  const projLabels = proj.map(p => p.mes);
+  const projAl     = proj.map(p => p.al);
+  const projBa     = proj.map(p => p.ba);
+  const projBj     = proj.map(p => p.bj);
+
+  const allLabels = [...histLabels, ...projLabels];
+
+  // Padding histórico para alinear con proyección
+  const histPad = new Array(histLabels.length).fill(null);
+  const projPad = new Array(histLabels.length).fill(null);
+
+  const histData = [...histVals, ...new Array(projLabels.length).fill(null)];
+  const alData   = [...projPad, ...projAl];
+  const baData   = [...projPad, ...projBa];
+  const bjData   = [...projPad, ...projBj];
+
+  // Conectar último punto histórico con primer punto proyectado
+  alData[histLabels.length - 1] = histVals[histVals.length - 1];
+  baData[histLabels.length - 1] = histVals[histVals.length - 1];
+  bjData[histLabels.length - 1] = histVals[histVals.length - 1];
+
+  const amber  = "#F59E0B";
+  const blue   = "#3B82F6";
+  const green  = "#10B981";
+  const grey   = "#94A3B8";
+  const textC  = getStyle("--text") || "#E2EAF4";
+  const mutedC = getStyle("--muted") || "#7A9BBF";
+  const borderC= getStyle("--border") || "#1E3A5A";
+  const surfC  = getStyle("--surface") || "#132236";
+
+  if (chartInstance) chartInstance.destroy();
+
+  const ctx = document.getElementById("chart").getContext("2d");
+  chartInstance = new Chart(ctx, {
+    type: "line",
+    data: {
+      labels: allLabels,
+      datasets: [
+        {
+          label: "Histórico",
+          data: histData,
+          borderColor: grey,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: grey,
+          tension: 0.3,
+          fill: false,
+          borderDash: [],
+        },
+        {
+          label: "Alcista",
+          data: alData,
+          borderColor: amber,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: amber,
+          tension: 0.3,
+          fill: false,
+          borderDash: [6, 3],
+        },
+        {
+          label: "Base",
+          data: baData,
+          borderColor: blue,
+          borderWidth: 2.5,
+          pointRadius: 5,
+          pointBackgroundColor: blue,
+          tension: 0.3,
+          fill: false,
+        },
+        {
+          label: "Bajista",
+          data: bjData,
+          borderColor: green,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: green,
+          tension: 0.3,
+          fill: false,
+          borderDash: [6, 3],
+        },
+      ],
+    },
+    options: {
+      responsive: true,
+      interaction: { mode: "index", intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          backgroundColor: surfC,
+          borderColor: borderC,
+          borderWidth: 1,
+          titleColor: textC,
+          bodyColor: mutedC,
+          padding: 12,
+          callbacks: {
+            label: ctx => {
+              if (ctx.raw === null) return null;
+              return ` ${ctx.dataset.label}: $${ctx.raw.toFixed(3)}/gal`;
+            },
+          },
+        },
+      },
+      scales: {
+        x: {
+          grid: { color: borderC, lineWidth: 0.5 },
+          ticks: { color: mutedC, font: { size: 11 }, maxRotation: 45 },
+          border: { color: borderC },
+        },
+        y: {
+          grid: { color: borderC, lineWidth: 0.5 },
+          ticks: {
+            color: mutedC,
+            font: { size: 11 },
+            callback: v => "$" + v.toFixed(2),
+          },
+          border: { color: borderC },
+        },
+      },
+    },
+  });
+
+  // Título del gráfico
+  const fuelName = fuel === "extra" ? "Extra / EcoPaís" : fuel === "diesel" ? "Diésel Premium" : "Súper 95";
+  document.getElementById("chart-title").textContent = `${fuelName} — Tres escenarios H2 2026`;
+}
+
+function updateKPIs(fuel) {
+  const hist = HISTORICO;
+  const proj = PROYECCION[fuel].meses;
+  const current = hist[hist.length - 1][fuel];
+  const jul = proj[0].ba;
+  const dic = proj[proj.length - 1].ba;
+  const dicAl = proj[proj.length - 1].al;
+  const dicBj = proj[proj.length - 1].bj;
+  const totalChg = dic - current;
+  const chgPct = (totalChg / current * 100).toFixed(1);
+
+  const kpis = document.getElementById("kpis-extra");
+  const fuelLabel = fuel === "extra" ? "Extra / EcoPaís" : fuel === "diesel" ? "Diésel Premium" : "Súper 95";
+  const julChg = ((jul - current)/current*100).toFixed(1);
+  const julSign = julChg > 0 ? "+" : "";
+  const dicSign = totalChg >= 0 ? "+" : "";
+  const chgSign = totalChg >= 0 ? "+" : "";
+
+  kpis.innerHTML = `
+    <div class="kpi">
+      <span class="kpi-label">Precio actual (jun 12)</span>
+      <span class="kpi-value">$${current.toFixed(3)}</span>
+      <span class="kpi-sub">${fuelLabel}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Proyección jul 12</span>
+      <span class="kpi-value ${julChg > 0 ? 'up' : 'down'}">$${jul.toFixed(3)}</span>
+      <span class="kpi-sub">${julSign}${julChg}% · ${proj[0].banda_b}</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Proyección dic 12 (base)</span>
+      <span class="kpi-value ${totalChg < 0 ? 'down' : 'up'}">$${dic.toFixed(3)}</span>
+      <span class="kpi-sub">${chgSign}${chgPct}% vs hoy</span>
+    </div>
+    <div class="kpi">
+      <span class="kpi-label">Rango fin de año</span>
+      <span class="kpi-value neutral">$${dicBj.toFixed(3)} – $${dicAl.toFixed(3)}</span>
+      <span class="kpi-sub">Bajista → Alcista</span>
+    </div>
+  `;
+
+  // Escenarios cards
+  document.getElementById("sc-up-extra").textContent = "$" + dicAl.toFixed(3);
+  document.getElementById("sc-base-extra").textContent = "$" + dic.toFixed(3);
+  document.getElementById("sc-dn-extra").textContent = "$" + dicBj.toFixed(3);
+}
+
+function setFuel(fuel) {
+  currentFuel = fuel;
+  document.querySelectorAll(".fuel-tab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+  renderTable(fuel);
+  renderChart(fuel);
+  updateKPIs(fuel);
+}
+
+function toggleTheme() {
+  const root = document.documentElement;
+  const current = root.getAttribute("data-theme");
+  root.setAttribute("data-theme", current === "dark" ? "light" : "dark");
+  setTimeout(() => renderChart(currentFuel), 50);
+}
+
+// ─── CHART.JS INLINE ─────────────────────────────────────────────────────────
+// Cargamos Chart.js desde CDN no está permitido; usamos una version minima inlineada
+// En su lugar usamos un canvas renderer propio liviano
+(function() {
+  // Reemplazamos con Canvas API directo
+  window.Chart = null;
+})();
+
+// Canvas renderer propio
+function renderCanvasChart(fuel) {
+  const canvas = document.getElementById("chart");
+  const ctx = canvas.getContext("2d");
+  const dpr = window.devicePixelRatio || 1;
+  const W = canvas.parentElement.offsetWidth - 48;
+  const H = 320;
+  canvas.width = W * dpr;
+  canvas.height = H * dpr;
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+  ctx.scale(dpr, dpr);
+
+  const hist = HISTORICO;
+  const proj = PROYECCION[fuel].meses;
+
+  const histLabels = hist.map(h => h.mes);
+  const histVals   = hist.map(h => h[fuel]);
+  const projLabels = proj.map(p => p.mes);
+  const projAl     = proj.map(p => p.al);
+  const projBa     = proj.map(p => p.ba);
+  const projBj     = proj.map(p => p.bj);
+
+  const allLabels = [...histLabels, ...projLabels];
+  const n = allLabels.length;
+
+  // Combinar
+  const alAll = [...histVals, ...projAl];
+  const baAll = [...histVals, ...projBa];
+  const bjAll = [...histVals, ...projBj];
+
+  const allVals = [...alAll, ...baAll, ...bjAll];
+  const minV = Math.min(...allVals) * 0.97;
+  const maxV = Math.max(...allVals) * 1.02;
+
+  const PAD = { top: 20, right: 20, bottom: 55, left: 60 };
+  const PW = W - PAD.left - PAD.right;
+  const PH = H - PAD.top - PAD.bottom;
+
+  function xp(i) { return PAD.left + (i / (n - 1)) * PW; }
+  function yp(v) { return PAD.top + PH - ((v - minV) / (maxV - minV)) * PH; }
+
+  const isDark = document.documentElement.getAttribute("data-theme") !== "light" &&
+    !document.documentElement.getAttribute("data-theme") &&
+    window.matchMedia("(prefers-color-scheme: dark)").matches ||
+    document.documentElement.getAttribute("data-theme") === "dark";
+
+  const textColor   = isDark ? "#E2EAF4" : "#0D1B2A";
+  const mutedColor  = isDark ? "#7A9BBF" : "#4A6A8A";
+  const gridColor   = isDark ? "#1E3A5A" : "#C8D8EA";
+  const surfColor   = isDark ? "#132236" : "#FFFFFF";
+
+  // Fondo
+  ctx.fillStyle = surfColor;
+  ctx.fillRect(0, 0, W, H);
+
+  // Grid Y
+  const yTicks = 5;
+  for (let i = 0; i <= yTicks; i++) {
+    const v = minV + (maxV - minV) * (i / yTicks);
+    const y = yp(v);
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 0.5;
+    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(W - PAD.right, y); ctx.stroke();
+    ctx.fillStyle = mutedColor;
+    ctx.font = "11px system-ui";
+    ctx.textAlign = "right";
+    ctx.fillText("$" + v.toFixed(2), PAD.left - 8, y + 4);
+  }
+
+  // Línea divisoria histórico/proyección
+  const splitX = xp(histLabels.length - 1);
+  ctx.strokeStyle = isDark ? "#2A4A6A" : "#B0C8E0";
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(splitX, PAD.top); ctx.lineTo(splitX, H - PAD.bottom); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = mutedColor;
+  ctx.font = "10px system-ui";
+  ctx.textAlign = "center";
+  ctx.fillText("↑ proyectado", splitX + 30, PAD.top + 12);
+
+  // Banda alcista/bajista (relleno)
+  ctx.globalAlpha = 0.08;
+  ctx.fillStyle = "#F59E0B";
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    if (i === 0) ctx.moveTo(xp(i), yp(alAll[i]));
+    else ctx.lineTo(xp(i), yp(alAll[i]));
+  }
+  for (let i = n - 1; i >= 0; i--) {
+    ctx.lineTo(xp(i), yp(bjAll[i]));
+  }
+  ctx.closePath(); ctx.fill();
+  ctx.globalAlpha = 1;
+
+  function drawLine(vals, color, dash, width, dotR) {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    ctx.setLineDash(dash);
+    ctx.beginPath();
+    vals.forEach((v, i) => {
+      if (i === 0) ctx.moveTo(xp(i), yp(v));
+      else ctx.lineTo(xp(i), yp(v));
+    });
+    ctx.stroke();
+    ctx.setLineDash([]);
+    // dots
+    vals.forEach((v, i) => {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(xp(i), yp(v), dotR, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  drawLine(bjAll, "#10B981", [6, 3], 1.8, 3);
+  drawLine(alAll, "#F59E0B", [6, 3], 1.8, 3);
+  drawLine(baAll, "#3B82F6", [],    2.5, 4.5);
+
+  // Resaltar último punto base
+  const lastI = n - 1;
+  const lastV = baAll[lastI];
+  ctx.fillStyle = "#3B82F6";
+  ctx.beginPath(); ctx.arc(xp(lastI), yp(lastV), 6, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = surfColor;
+  ctx.beginPath(); ctx.arc(xp(lastI), yp(lastV), 3, 0, Math.PI*2); ctx.fill();
+  ctx.fillStyle = textColor;
+  ctx.font = "bold 12px system-ui";
+  ctx.textAlign = "right";
+  ctx.fillText("$" + lastV.toFixed(3), xp(lastI) - 8, yp(lastV) - 8);
+
+  // Labels X
+  ctx.fillStyle = mutedColor;
+  ctx.font = "11px system-ui";
+  ctx.textAlign = "center";
+  allLabels.forEach((l, i) => {
+    if (i % 2 === 0 || i === n - 1) {
+      ctx.save();
+      ctx.translate(xp(i), H - PAD.bottom + 16);
+      ctx.rotate(-Math.PI / 5);
+      ctx.fillText(l, 0, 0);
+      ctx.restore();
+    }
+  });
+}
+
+// Init
+window.addEventListener("load", () => {
+  renderTable("extra");
+  renderCanvasChart("extra");
+  updateKPIs("extra");
+});
+
+window.addEventListener("resize", () => {
+  renderCanvasChart(currentFuel);
+});
+
+// Override setFuel para usar canvas renderer
+const _origSetFuel = setFuel;
+window.setFuel = function(fuel) {
+  currentFuel = fuel;
+  document.querySelectorAll(".fuel-tab").forEach(t => t.classList.remove("active"));
+  event.target.classList.add("active");
+  renderTable(fuel);
+  renderCanvasChart(fuel);
+  updateKPIs(fuel);
+};
+
+window.toggleTheme = function() {
+  const root = document.documentElement;
+  const current = root.getAttribute("data-theme");
+  const isDark = current === "dark" || (!current && window.matchMedia("(prefers-color-scheme: dark)").matches);
+  root.setAttribute("data-theme", isDark ? "light" : "dark");
+  setTimeout(() => renderCanvasChart(currentFuel), 50);
+};
+</script>
